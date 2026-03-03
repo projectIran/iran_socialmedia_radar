@@ -392,13 +392,13 @@ function FigureColumn({
   const titleColor = variant === "left" ? "text-teal-700" : "text-purple-700"
 
   return (
-    <div className="flex flex-col items-center px-4 py-8 md:px-6 lg:px-8">
+    <div className="flex flex-col items-center px-3 py-6 sm:px-4 sm:py-8 md:px-6 lg:px-8">
       <div className="mb-8 text-center">
         <h2 className={`text-sm font-bold uppercase tracking-wide ${titleColor}`}>{title}</h2>
         <p className="mt-1 text-xs text-neutral-500">{subtitle}</p>
       </div>
 
-      <div className="flex flex-wrap items-start justify-center gap-4 md:gap-5 lg:gap-6">
+      <div className="flex flex-wrap items-start justify-center gap-3 sm:gap-4 md:gap-5 lg:gap-6">
         {sortedFigures.map((figure) => (
           <FigureCircle
             key={figure.name}
@@ -479,33 +479,35 @@ export default function SocialMediaRadar() {
         </div>
 
         {/* Mobile Layout */}
-        <div className="md:hidden">
-          <div className="bg-gradient-to-br from-cyan-50/80 via-teal-50/60 to-emerald-50/40">
-            <FigureColumn
-              figures={leftFigures}
-              title="GLOBAL PROGRESSIVE FIGURES"
-              subtitle="Influential Social Media Voices"
-              baseSize={60}
-              variant="left"
-            />
-          </div>
-          
-          {/* Mobile Separator */}
-          <div className="relative flex items-center justify-center py-4">
-            <div className="h-px w-full bg-gradient-to-r from-teal-300 via-neutral-300 to-purple-300" />
-            <span className="absolute bg-slate-50 px-4 text-[10px] font-semibold uppercase tracking-widest text-neutral-400">
+        <div className="md:hidden px-3 pb-10 pt-6">
+          <div className="relative overflow-hidden rounded-3xl border border-white/70 bg-white/40 shadow-sm">
+            <div className="grid grid-cols-2">
+              <div className="bg-gradient-to-br from-cyan-50/80 via-teal-50/60 to-emerald-50/40">
+                <FigureColumn
+                  figures={leftFigures}
+                  title="GLOBAL PROGRESSIVE FIGURES"
+                  subtitle="Influential Social Media Voices"
+                  baseSize={52}
+                  variant="left"
+                />
+              </div>
+              
+              <div className="bg-gradient-to-bl from-purple-50/80 via-pink-50/60 to-rose-50/40">
+                <FigureColumn
+                  figures={rightFigures}
+                  title="IRAN LIBERATION ADVOCATES"
+                  subtitle="Most Influential Faces"
+                  baseSize={52}
+                  variant="right"
+                />
+              </div>
+            </div>
+
+            {/* Mobile Vertical Separator */}
+            <div className="pointer-events-none absolute inset-y-5 left-1/2 w-px -translate-x-1/2 bg-gradient-to-b from-teal-300 via-neutral-300 to-purple-300" />
+            <span className="pointer-events-none absolute top-3 left-1/2 -translate-x-1/2 rounded-full bg-white/90 px-3 py-1 text-[9px] font-semibold uppercase tracking-[0.25em] text-neutral-400">
               Global Influence Separator
             </span>
-          </div>
-          
-          <div className="bg-gradient-to-bl from-purple-50/80 via-pink-50/60 to-rose-50/40">
-            <FigureColumn
-              figures={rightFigures}
-              title="IRAN LIBERATION ADVOCATES"
-              subtitle="Most Influential Faces"
-              baseSize={60}
-              variant="right"
-            />
           </div>
         </div>
       </div>
