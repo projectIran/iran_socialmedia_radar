@@ -5,68 +5,68 @@ import { X, Mail } from "lucide-react"
 
 // Left side figures (Global Progressive Figures)
 const leftFigures = [
-  { name: "Alexandria Ocasio-Cortez", urgency: 10, twitter: "AOC", instagram: "aoc", email: "", image: "https://randomuser.me/api/portraits/women/1.jpg", topPriority: true },
-  { name: "Bernie Sanders", urgency: 9.5, twitter: "BernieSanders", instagram: "berniesanders", email: "", image: "https://randomuser.me/api/portraits/men/1.jpg", topPriority: true },
-  { name: "Ilhan Omar", urgency: 9, twitter: "IlhanMN", instagram: "ilhanmn", email: "", image: "https://randomuser.me/api/portraits/women/2.jpg", topPriority: false },
-  { name: "Rashida Tlaib", urgency: 8.5, twitter: "RashidaTlaib", instagram: "rashidatlaib", email: "", image: "https://randomuser.me/api/portraits/women/3.jpg", topPriority: false },
-  { name: "Trita Parsi", urgency: 8.5, twitter: "taborparsi", instagram: "tritaparsi", email: "", image: "https://randomuser.me/api/portraits/men/2.jpg", topPriority: false },
-  { name: "Pramila Jayapal", urgency: 8, twitter: "PramilaJayapal", instagram: "pramila.jayapal", email: "", image: "https://randomuser.me/api/portraits/women/4.jpg", topPriority: false },
-  { name: "Ro Khanna", urgency: 7.8, twitter: "RoKhanna", instagram: "rokhanna", email: "", image: "https://randomuser.me/api/portraits/men/3.jpg", topPriority: false },
-  { name: "Jamie Raskin", urgency: 7.5, twitter: "RepRaskin", instagram: "repraskin", email: "", image: "https://randomuser.me/api/portraits/men/4.jpg", topPriority: false },
-  { name: "Medea Benjamin", urgency: 7.5, twitter: "medeabenjamin", instagram: "codepink", email: "", image: "https://randomuser.me/api/portraits/women/5.jpg", topPriority: false },
-  { name: "Sara Haghdoosti", urgency: 7, twitter: "sarahaghdoosti", instagram: "sarahaghdoosti", email: "", image: "https://randomuser.me/api/portraits/women/6.jpg", topPriority: false },
-  { name: "Ayanna Pressley", urgency: 7, twitter: "AyannaPressley", instagram: "ayannapressley", email: "", image: "https://randomuser.me/api/portraits/women/7.jpg", topPriority: false },
-  { name: "Summer Lee", urgency: 6.8, twitter: "SummerForPA", instagram: "summerforpa", email: "", image: "https://randomuser.me/api/portraits/women/8.jpg", topPriority: false },
-  { name: "Cori Bush", urgency: 6.5, twitter: "CoriBush", instagram: "coribush", email: "", image: "https://randomuser.me/api/portraits/women/9.jpg", topPriority: false },
-  { name: "Maxwell Frost", urgency: 6.5, twitter: "MaxwellFrostFL", instagram: "maxwellfrostfl", email: "", image: "https://randomuser.me/api/portraits/men/5.jpg", topPriority: false },
-  { name: "Jamaal Bowman", urgency: 6.3, twitter: "JamaalBowmanNY", instagram: "jamaalbowman", email: "", image: "https://randomuser.me/api/portraits/men/6.jpg", topPriority: false },
-  { name: "Greg Casar", urgency: 6, twitter: "GregCasar", instagram: "gregcasar", email: "", image: "https://randomuser.me/api/portraits/men/7.jpg", topPriority: false },
-  { name: "Zohran Mamdani", urgency: 6, twitter: "ZohranKMamdani", instagram: "zohranmamdani", email: "", image: "https://randomuser.me/api/portraits/men/8.jpg", topPriority: false },
-  { name: "Delia Ramirez", urgency: 5.8, twitter: "repdeliaramirez", instagram: "deliaramireztx", email: "", image: "https://randomuser.me/api/portraits/women/10.jpg", topPriority: false },
-  { name: "Mark Pocan", urgency: 5.5, twitter: "RepMarkPocan", instagram: "repmarkpocan", email: "", image: "https://randomuser.me/api/portraits/men/9.jpg", topPriority: false },
-  { name: "Jan Schakowsky", urgency: 5.3, twitter: "janschakowsky", instagram: "janschakowsky", email: "", image: "https://randomuser.me/api/portraits/women/11.jpg", topPriority: false },
-  { name: "Lloyd Doggett", urgency: 5, twitter: "RepDoggett", instagram: "", email: "", image: "https://randomuser.me/api/portraits/men/10.jpg", topPriority: false },
-  { name: "Jared Huffman", urgency: 5, twitter: "RepHuffman", instagram: "", email: "", image: "https://randomuser.me/api/portraits/men/11.jpg", topPriority: false },
-  { name: "Ezra Levin", urgency: 4.8, twitter: "ezralevin", instagram: "ezralevin", email: "", image: "https://randomuser.me/api/portraits/men/12.jpg", topPriority: false },
-  { name: "Leah Greenberg", urgency: 4.5, twitter: "Leahgreenb", instagram: "", email: "", image: "https://randomuser.me/api/portraits/women/12.jpg", topPriority: false },
-  { name: "Alexandra Rojas", urgency: 4.3, twitter: "alexandrasrojas", instagram: "", email: "", image: "https://randomuser.me/api/portraits/women/13.jpg", topPriority: false },
-  { name: "Stephen Miles", urgency: 4, twitter: "SPMiles42", instagram: "", email: "", image: "https://randomuser.me/api/portraits/men/13.jpg", topPriority: false },
-  { name: "Morgan McGarvey", urgency: 3.8, twitter: "RepMcGarvey", instagram: "", email: "", image: "https://randomuser.me/api/portraits/men/14.jpg", topPriority: false },
-  { name: "Lateefah Simon", urgency: 3.5, twitter: "Lateefah", instagram: "lateefah", email: "", image: "https://randomuser.me/api/portraits/women/14.jpg", topPriority: false },
+  { name: "Alexandria Ocasio-Cortez", urgency: 10, twitter: "AOC", instagram: "aoc", email: "", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4a/Alexandria_Ocasio-Cortez_Official_Portrait.jpg/330px-Alexandria_Ocasio-Cortez_Official_Portrait.jpg", topPriority: true },
+  { name: "Bernie Sanders", urgency: 9.5, twitter: "BernieSanders", instagram: "berniesanders", email: "", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2e/Bernie_Sanders_2023.jpg/330px-Bernie_Sanders_2023.jpg", topPriority: true },
+  { name: "Ilhan Omar", urgency: 9, twitter: "IlhanMN", instagram: "ilhanmn", email: "", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5f/Ilhan_Omar%2C_official_portrait%2C_116th_Congress_%28cropped%29_A.jpg/330px-Ilhan_Omar%2C_official_portrait%2C_116th_Congress_%28cropped%29_A.jpg", topPriority: false },
+  { name: "Rashida Tlaib", urgency: 8.5, twitter: "RashidaTlaib", instagram: "rashidatlaib", email: "", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/58/Tlaib_Rashida_119th_Congress_%283x4_cropped%29.jpg/330px-Tlaib_Rashida_119th_Congress_%283x4_cropped%29.jpg", topPriority: false },
+  { name: "Trita Parsi", urgency: 8.5, twitter: "taborparsi", instagram: "tritaparsi", email: "", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/87/Trita_Parsi_-_ALTCONF-0174_%284441991863%29_%28cropped%29.jpg/330px-Trita_Parsi_-_ALTCONF-0174_%284441991863%29_%28cropped%29.jpg", topPriority: false },
+  { name: "Pramila Jayapal", urgency: 8, twitter: "PramilaJayapal", instagram: "pramila.jayapal", email: "", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/eb/Pramila_Jayapal%2C_official_portrait%2C_116th_Congress.jpg/330px-Pramila_Jayapal%2C_official_portrait%2C_116th_Congress.jpg", topPriority: false },
+  { name: "Ro Khanna", urgency: 7.8, twitter: "RoKhanna", instagram: "rokhanna", email: "", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/16/Ro_Khanna%2C_official_portrait%2C_115th_Congress_%283x4%29.jpg/330px-Ro_Khanna%2C_official_portrait%2C_115th_Congress_%283x4%29.jpg", topPriority: false },
+  { name: "Jamie Raskin", urgency: 7.5, twitter: "RepRaskin", instagram: "repraskin", email: "", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9b/Jamie_Raskin_Official_Portrait_2019.jpg/330px-Jamie_Raskin_Official_Portrait_2019.jpg", topPriority: false },
+  { name: "Medea Benjamin", urgency: 7.5, twitter: "medeabenjamin", instagram: "codepink", email: "", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6b/Medea_Benjamin_1.JPG/330px-Medea_Benjamin_1.JPG", topPriority: false },
+  { name: "Sara Haghdoosti", urgency: 7, twitter: "sarahaghdoosti", instagram: "sarahaghdoosti", email: "", image: "https://images.squarespace-cdn.com/content/v1/5e57374d7d08e01bbd1bd10c/1583026642407-PEV5755RL146QAFW3KZ4/DSCF4014.jpg?format=1000w", topPriority: false },
+  { name: "Ayanna Pressley", urgency: 7, twitter: "AyannaPressley", instagram: "ayannapressley", email: "", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/57/Rep._Ayanna_Pressley%2C_117th_Congress.jpg/330px-Rep._Ayanna_Pressley%2C_117th_Congress.jpg", topPriority: false },
+  { name: "Summer Lee", urgency: 6.8, twitter: "SummerForPA", instagram: "summerforpa", email: "", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8d/Rep._Summer_Lee_-_118th_Congress_%283x4_cropped%29.jpg/330px-Rep._Summer_Lee_-_118th_Congress_%283x4_cropped%29.jpg", topPriority: false },
+  { name: "Cori Bush", urgency: 6.5, twitter: "CoriBush", instagram: "coribush", email: "", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/21/Cori_Bush_117th_U.S_Congress.jpg/330px-Cori_Bush_117th_U.S_Congress.jpg", topPriority: false },
+  { name: "Maxwell Frost", urgency: 6.5, twitter: "MaxwellFrostFL", instagram: "maxwellfrostfl", email: "", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/58/Rep._Maxwell_Frost_-_118th_Congress.jpg/330px-Rep._Maxwell_Frost_-_118th_Congress.jpg", topPriority: false },
+  { name: "Jamaal Bowman", urgency: 6.3, twitter: "JamaalBowmanNY", instagram: "jamaalbowman", email: "", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c4/Jamaal_Bowman_117th_U.S_Congress.jpg/330px-Jamaal_Bowman_117th_U.S_Congress.jpg", topPriority: false },
+  { name: "Greg Casar", urgency: 6, twitter: "GregCasar", instagram: "gregcasar", email: "", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/04/Rep._Greg_Casar_-_118th_Congress_%283x4_cropped%29.jpg/330px-Rep._Greg_Casar_-_118th_Congress_%283x4_cropped%29.jpg", topPriority: false },
+  { name: "Zohran Mamdani", urgency: 6, twitter: "ZohranKMamdani", instagram: "zohranmamdani", email: "", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/59/Zohran_Mamdani_05.25.25_%28b%29_%28cropped%29.jpg/330px-Zohran_Mamdani_05.25.25_%28b%29_%28cropped%29.jpg", topPriority: false },
+  { name: "Delia Ramirez", urgency: 5.8, twitter: "repdeliaramirez", instagram: "deliaramireztx", email: "", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cd/Delia_Ramirez%2C_official_portrait_2025.jpg/330px-Delia_Ramirez%2C_official_portrait_2025.jpg", topPriority: false },
+  { name: "Mark Pocan", urgency: 5.5, twitter: "RepMarkPocan", instagram: "repmarkpocan", email: "", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/22/Mark_Pocan_headshot.jpg/330px-Mark_Pocan_headshot.jpg", topPriority: false },
+  { name: "Jan Schakowsky", urgency: 5.3, twitter: "janschakowsky", instagram: "janschakowsky", email: "", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/89/Jan_Schakowsky_official_photo.jpg/330px-Jan_Schakowsky_official_photo.jpg", topPriority: false },
+  { name: "Lloyd Doggett", urgency: 5, twitter: "RepDoggett", instagram: "", email: "", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/28/Lloyd_Doggett_118h_ID.jpeg/330px-Lloyd_Doggett_118h_ID.jpeg", topPriority: false },
+  { name: "Jared Huffman", urgency: 5, twitter: "RepHuffman", instagram: "", email: "", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d2/Jared_Huffman_Portrait_118.jpg/330px-Jared_Huffman_Portrait_118.jpg", topPriority: false },
+  { name: "Ezra Levin", urgency: 4.8, twitter: "ezralevin", instagram: "ezralevin", email: "", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/12/Ezra_Levin_at_the_Treasury_Building_protest.jpg/330px-Ezra_Levin_at_the_Treasury_Building_protest.jpg", topPriority: false },
+  { name: "Leah Greenberg", urgency: 4.5, twitter: "Leahgreenb", instagram: "", email: "", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1c/Leah_Greenberg_July_2025.png/330px-Leah_Greenberg_July_2025.png", topPriority: false },
+  { name: "Alexandra Rojas", urgency: 4.3, twitter: "alexandrasrojas", instagram: "", email: "", image: "https://i.guim.co.uk/img/uploads/2025/05/11/Alexandra_Rojas.jpg?width=700&dpr=1&quality=85", topPriority: false },
+  { name: "Stephen Miles", urgency: 4, twitter: "SPMiles42", instagram: "", email: "", image: "https://i0.wp.com/lepoco.org/wp-content/uploads/2022/03/EFC9C361-C78A-42BA-9FAB-5C1E1D59B762_1_201_a.jpeg?ssl=1", topPriority: false },
+  { name: "Morgan McGarvey", urgency: 3.8, twitter: "RepMcGarvey", instagram: "", email: "", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a8/Rep._Morgan_McGarvey_-_118th_Congress_%28cropped2%29.jpg/330px-Rep._Morgan_McGarvey_-_118th_Congress_%28cropped2%29.jpg", topPriority: false },
+  { name: "Lateefah Simon", urgency: 3.5, twitter: "Lateefah", instagram: "lateefah", email: "", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b9/Rep._Lateefah_Simon_Official_Portrait.jpg/330px-Rep._Lateefah_Simon_Official_Portrait.jpg", topPriority: false },
 ]
 
 // Right side figures (Iran Liberation Advocates)
 const rightFigures = [
-  { name: "Marco Rubio", urgency: 10, twitter: "marcorubio", instagram: "marcorubio", email: "", image: "https://randomuser.me/api/portraits/men/20.jpg", topPriority: true },
-  { name: "JD Vance", urgency: 9.5, twitter: "JDVance", instagram: "jdvance", email: "", image: "https://randomuser.me/api/portraits/men/21.jpg", topPriority: true },
-  { name: "Mike Johnson", urgency: 9, twitter: "SpeakerJohnson", instagram: "speakermikejohnson", email: "", image: "https://randomuser.me/api/portraits/men/22.jpg", topPriority: false },
-  { name: "Jared Kushner", urgency: 9, twitter: "jaboredkushner", instagram: "jaredkushner", email: "", image: "https://randomuser.me/api/portraits/men/23.jpg", topPriority: false },
-  { name: "Tom Cotton", urgency: 8.5, twitter: "TomCottonAR", instagram: "tomcottonar", email: "", image: "https://randomuser.me/api/portraits/men/24.jpg", topPriority: false },
-  { name: "Pete Hegseth", urgency: 8.5, twitter: "PeteHegseth", instagram: "petehegseth", email: "", image: "https://randomuser.me/api/portraits/men/25.jpg", topPriority: false },
-  { name: "Michael Waltz", urgency: 8, twitter: "michaelgwaltz", instagram: "michaelgwaltz", email: "", image: "https://randomuser.me/api/portraits/men/26.jpg", topPriority: false },
-  { name: "Tulsi Gabbard", urgency: 8, twitter: "TulsiGabbard", instagram: "tulsi", email: "", image: "https://randomuser.me/api/portraits/women/20.jpg", topPriority: true },
-  { name: "John Ratcliffe", urgency: 7.8, twitter: "RepRatcliffe", instagram: "", email: "", image: "https://randomuser.me/api/portraits/men/27.jpg", topPriority: false },
-  { name: "Elise Stefanik", urgency: 7.5, twitter: "EliseStefanik", instagram: "elisestefanik", email: "", image: "https://randomuser.me/api/portraits/women/21.jpg", topPriority: false },
-  { name: "Brian Hook", urgency: 7.5, twitter: "brianhook56", instagram: "", email: "", image: "https://randomuser.me/api/portraits/men/28.jpg", topPriority: false },
-  { name: "Richard Grenell", urgency: 7.3, twitter: "RichardGrenell", instagram: "richardgrenell", email: "", image: "https://randomuser.me/api/portraits/men/29.jpg", topPriority: false },
-  { name: "Robert O'Brien", urgency: 7, twitter: "robertcobrien", instagram: "", email: "", image: "https://randomuser.me/api/portraits/men/30.jpg", topPriority: false },
-  { name: "John Thune", urgency: 6.8, twitter: "SenJohnThune", instagram: "senjohnthune", email: "", image: "https://randomuser.me/api/portraits/men/31.jpg", topPriority: false },
-  { name: "Steve Witkoff", urgency: 6.5, twitter: "", instagram: "", email: "", image: "https://randomuser.me/api/portraits/men/32.jpg", topPriority: false },
-  { name: "Roger Wicker", urgency: 6.3, twitter: "SenatorWicker", instagram: "", email: "", image: "https://randomuser.me/api/portraits/men/33.jpg", topPriority: false },
-  { name: "Jim Risch", urgency: 6, twitter: "SenatorRisch", instagram: "", email: "", image: "https://randomuser.me/api/portraits/men/34.jpg", topPriority: false },
-  { name: "Mike Rogers", urgency: 5.8, twitter: "RepMikeRogers", instagram: "", email: "", image: "https://randomuser.me/api/portraits/men/35.jpg", topPriority: false },
-  { name: "Brian Mast", urgency: 5.5, twitter: "RepBrianMast", instagram: "repbrianmast", email: "", image: "https://randomuser.me/api/portraits/men/36.jpg", topPriority: false },
-  { name: "Rick Crawford", urgency: 5.3, twitter: "RepRickCrawford", instagram: "", email: "", image: "https://randomuser.me/api/portraits/men/37.jpg", topPriority: false },
-  { name: "Mark Dubowitz", urgency: 5, twitter: "mdubowitz", instagram: "", email: "", image: "https://randomuser.me/api/portraits/men/38.jpg", topPriority: false },
-  { name: "Behnam Ben Taleblu", urgency: 4.8, twitter: "BehnamTaleblu", instagram: "", email: "", image: "https://randomuser.me/api/portraits/men/39.jpg", topPriority: false },
-  { name: "Richard Goldberg", urgency: 4.5, twitter: "rich_goldberg", instagram: "", email: "", image: "https://randomuser.me/api/portraits/men/40.jpg", topPriority: false },
-  { name: "Saeed Ghasseminejad", urgency: 4.3, twitter: "SGhasseminejad", instagram: "", email: "", image: "https://randomuser.me/api/portraits/men/41.jpg", topPriority: false },
-  { name: "Jonathan Schanzer", urgency: 4, twitter: "JSchanzer", instagram: "", email: "", image: "https://randomuser.me/api/portraits/men/42.jpg", topPriority: false },
-  { name: "Michael Doran", urgency: 3.8, twitter: "doranbm", instagram: "", email: "", image: "https://randomuser.me/api/portraits/men/43.jpg", topPriority: false },
-  { name: "Zineb Riboua", urgency: 3.5, twitter: "ZinebRiboua", instagram: "", email: "", image: "https://randomuser.me/api/portraits/women/22.jpg", topPriority: false },
-  { name: "Joel Rayburn", urgency: 3.3, twitter: "JoelRayburn", instagram: "", email: "", image: "https://randomuser.me/api/portraits/men/44.jpg", topPriority: false },
-  { name: "Rebeccah Heinrichs", urgency: 3, twitter: "RLHeinrichs", instagram: "", email: "", image: "https://randomuser.me/api/portraits/women/23.jpg", topPriority: false },
-  { name: "Victoria Coates", urgency: 2.8, twitter: "VictoriaCoates", instagram: "", email: "", image: "https://randomuser.me/api/portraits/women/24.jpg", topPriority: false },
+  { name: "Marco Rubio", urgency: 10, twitter: "marcorubio", instagram: "marcorubio", email: "", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f7/Official_portrait_of_Secretary_Marco_Rubio_%28cropped%29%282%29.jpg/330px-Official_portrait_of_Secretary_Marco_Rubio_%28cropped%29%282%29.jpg", topPriority: true },
+  { name: "JD Vance", urgency: 9.5, twitter: "JDVance", instagram: "jdvance", email: "", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f3/January_2025_Official_Vice_Presidential_Portrait_of_JD_Vance.jpg/330px-January_2025_Official_Vice_Presidential_Portrait_of_JD_Vance.jpg", topPriority: true },
+  { name: "Mike Johnson", urgency: 9, twitter: "SpeakerJohnson", instagram: "speakermikejohnson", email: "", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/47/Speaker_Mike_Johnson_Official_Portrait_%28cropped%29%28b%29.jpg/330px-Speaker_Mike_Johnson_Official_Portrait_%28cropped%29%28b%29.jpg", topPriority: false },
+  { name: "Jared Kushner", urgency: 9, twitter: "jaboredkushner", instagram: "jaredkushner", email: "", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3e/Jared_Kushner_2025.jpg/330px-Jared_Kushner_2025.jpg", topPriority: false },
+  { name: "Tom Cotton", urgency: 8.5, twitter: "TomCottonAR", instagram: "tomcottonar", email: "", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/49/Tom_Cotton_official_Senate_photo.jpg/330px-Tom_Cotton_official_Senate_photo.jpg", topPriority: false },
+  { name: "Pete Hegseth", urgency: 8.5, twitter: "PeteHegseth", instagram: "petehegseth", email: "", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2f/Pete_Hegseth_Official_Portrait.jpg/330px-Pete_Hegseth_Official_Portrait.jpg", topPriority: false },
+  { name: "Michael Waltz", urgency: 8, twitter: "michaelgwaltz", instagram: "michaelgwaltz", email: "", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/48/Official_Portrait_of_UN_Ambassador_Mike_Waltz_%28cropped_1%29.jpg/330px-Official_Portrait_of_UN_Ambassador_Mike_Waltz_%28cropped_1%29.jpg", topPriority: false },
+  { name: "Tulsi Gabbard", urgency: 8, twitter: "TulsiGabbard", instagram: "tulsi", email: "", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7a/Director_Tulsi_Gabbard_Official_Portrait.jpg/330px-Director_Tulsi_Gabbard_Official_Portrait.jpg", topPriority: true },
+  { name: "John Ratcliffe", urgency: 7.8, twitter: "RepRatcliffe", instagram: "", email: "", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c0/John_Ratcliffe_official_photo.jpg/330px-John_Ratcliffe_official_photo.jpg", topPriority: false },
+  { name: "Elise Stefanik", urgency: 7.5, twitter: "EliseStefanik", instagram: "elisestefanik", email: "", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/b/ba/Elise_Stefanik%2C_115th_official_photo_%284x5_cropped%29.jpg/330px-Elise_Stefanik%2C_115th_official_photo_%284x5_cropped%29.jpg", topPriority: false },
+  { name: "Brian Hook", urgency: 7.5, twitter: "brianhook56", instagram: "", email: "", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2b/Brian_Hook_2020_%28cropped%29.jpg/330px-Brian_Hook_2020_%28cropped%29.jpg", topPriority: false },
+  { name: "Richard Grenell", urgency: 7.3, twitter: "RichardGrenell", instagram: "richardgrenell", email: "", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b7/Richard_Grenell_official_portrait.jpg/330px-Richard_Grenell_official_portrait.jpg", topPriority: false },
+  { name: "Robert O'Brien", urgency: 7, twitter: "robertcobrien", instagram: "", email: "", image: "https://upload.wikimedia.org/wikipedia/commons/e/eb/Robert_C._O%27Brien.jpg", topPriority: false },
+  { name: "John Thune", urgency: 6.8, twitter: "SenJohnThune", instagram: "senjohnthune", email: "", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/15/John_Thune_117th_Congress_portrait.jpg/330px-John_Thune_117th_Congress_portrait.jpg", topPriority: false },
+  { name: "Steve Witkoff", urgency: 6.5, twitter: "", instagram: "", email: "", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b7/Steve_Witkoff_%282025%29_%28cropped%29.jpg/330px-Steve_Witkoff_%282025%29_%28cropped%29.jpg", topPriority: false },
+  { name: "Roger Wicker", urgency: 6.3, twitter: "SenatorWicker", instagram: "", email: "", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/2025_Roger_Wicker_%28cropped%29.jpg/330px-2025_Roger_Wicker_%28cropped%29.jpg", topPriority: false },
+  { name: "Jim Risch", urgency: 6, twitter: "SenatorRisch", instagram: "", email: "", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/64/Bob_Menendez%2C_Jim_Risch_with_Tsihanouskaya_at_Senate_Foreign_%28cropped%29.jpg/330px-Bob_Menendez%2C_Jim_Risch_with_Tsihanouskaya_at_Senate_Foreign_%28cropped%29.jpg", topPriority: false },
+  { name: "Mike Rogers", urgency: 5.8, twitter: "RepMikeRogers", instagram: "", email: "", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4c/Mike_Rogers_119th_Congress.jpg/330px-Mike_Rogers_119th_Congress.jpg", topPriority: false },
+  { name: "Brian Mast", urgency: 5.5, twitter: "RepBrianMast", instagram: "repbrianmast", email: "", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/69/Brian_Mast_official_115th_Congress_photo.jpg/330px-Brian_Mast_official_115th_Congress_photo.jpg", topPriority: false },
+  { name: "Rick Crawford", urgency: 5.3, twitter: "RepRickCrawford", instagram: "", email: "", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/33/Crawford_Rick_118th_Congress.jpg/330px-Crawford_Rick_118th_Congress.jpg", topPriority: false },
+  { name: "Mark Dubowitz", urgency: 5, twitter: "mdubowitz", instagram: "", email: "", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/31/06.15_%E7%B8%BD%E7%B5%B1%E6%8E%A5%E8%A6%8B%E3%80%8C%E7%BE%8E%E5%9C%8B%E6%99%BA%E5%BA%AB%E3%80%8E%E4%BF%9D%E8%A1%9B%E6%B0%91%E4%B8%BB%E5%9F%BA%E9%87%91%E6%9C%83%E3%80%8F%EF%BC%88FDD%EF%BC%89%E8%BB%8D%E4%BA%8B%E5%AE%89%E5%85%A8%E5%B0%88%E5%AE%B6%E4%BA%A4%E6%B5%81%E5%9C%98%E3%80%8D_%2852976061215%29.jpg/330px-06.15_%E7%B8%BD%E7%B5%B1%E6%8E%A5%E8%A6%8B%E3%80%8C%E7%BE%8E%E5%9C%8B%E6%99%BA%E5%BA%AB%E3%80%8E%E4%BF%9D%E8%A1%9B%E6%B0%91%E4%B8%BB%E5%9F%BA%E9%87%91%E6%9C%83%E3%80%8F%EF%BC%88FDD%EF%BC%89%E8%BB%8D%E4%BA%8B%E5%AE%89%E5%85%A8%E5%B0%88%E5%AE%B6%E4%BA%A4%E6%B5%81%E5%9C%98%E3%80%8D_%2852976061215%29.jpg", topPriority: false },
+  { name: "Behnam Ben Taleblu", urgency: 4.8, twitter: "BehnamTaleblu", instagram: "", email: "", image: "https://www.fdd.org/wp-content/uploads/2018/08/Headshot_HighRes_BehnamBenTaleblu.jpg", topPriority: false },
+  { name: "Richard Goldberg", urgency: 4.5, twitter: "rich_goldberg", instagram: "", email: "", image: "https://www.fdd.org/wp-content/uploads/2019/09/Headshot_HighRes_RichardGoldberg.jpg", topPriority: false },
+  { name: "Saeed Ghasseminejad", urgency: 4.3, twitter: "SGhasseminejad", instagram: "", email: "", image: "https://www.fdd.org/wp-content/uploads/2019/04/Headshot_HighRes_SaeedGhasseminejad.jpg", topPriority: false },
+  { name: "Jonathan Schanzer", urgency: 4, twitter: "JSchanzer", instagram: "", email: "", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/f/fe/Jonathan_Schanzer_%282023%29.jpg/330px-Jonathan_Schanzer_%282023%29.jpg", topPriority: false },
+  { name: "Michael Doran", urgency: 3.8, twitter: "doranbm", instagram: "", email: "", image: "https://www.hudson.org/content/images/michael_doran.jpg", topPriority: false },
+  { name: "Zineb Riboua", urgency: 3.5, twitter: "ZinebRiboua", instagram: "", email: "", image: "https://www.hudson.org/content/images/zineb_riboua.jpg", topPriority: false },
+  { name: "Joel Rayburn", urgency: 3.3, twitter: "JoelRayburn", instagram: "", email: "", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b3/Joel_Rayburn_New_America1_%28cropped%29.jpg/330px-Joel_Rayburn_New_America1_%28cropped%29.jpg", topPriority: false },
+  { name: "Rebeccah Heinrichs", urgency: 3, twitter: "RLHeinrichs", instagram: "", email: "", image: "https://www.hudson.org/content/images/rebeccah_heinrichs.jpg", topPriority: false },
+  { name: "Victoria Coates", urgency: 2.8, twitter: "VictoriaCoates", instagram: "", email: "", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/d/db/Victoria_Coates_NATO.png/330px-Victoria_Coates_NATO.png", topPriority: false },
 ]
 
 // Normalize radius between 0.6 and 1.4 factor for subtle size differences
@@ -146,7 +146,7 @@ function FigureCircle({
               src={figure.image}
               alt={figure.name}
               className="h-full w-full object-cover"
-              crossOrigin="anonymous"
+              referrerPolicy="no-referrer"
             />
           </div>
         </div>
@@ -278,7 +278,7 @@ function FigureModal({
                     src={figure.image}
                     alt={figure.name}
                     className="h-full w-full object-cover"
-                    crossOrigin="anonymous"
+                    referrerPolicy="no-referrer"
                   />
                 </div>
               </div>
