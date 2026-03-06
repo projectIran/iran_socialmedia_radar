@@ -8,6 +8,8 @@ out/
 # Environment
 .env
 .env*.local
+*.env
+*.env.local
 
 # Python
 .venv/
@@ -20,6 +22,7 @@ __pycache__/
 *.log
 .turbo
 pnpm-debug.log*
+tsconfig.tsbuildinfo
 
 # OS and IDE
 .DS_Store
