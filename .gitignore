@@ -1,6 +1,41 @@
+# Dependencies
 node_modules/
+package-lock.json
+
+# Next.js / frontend
 .next/
-.venv/
-tsconfig.tsbuildinfo
+out/
+
+# Environment
+.env
+.env*.local
 *.env
 *.env.local
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# Logs and caches
+*.log
+.turbo
+pnpm-debug.log*
+tsconfig.tsbuildinfo
+
+# OS and IDE
+.DS_Store
+*.swp
+.idea/
+.vscode/
+
+# Telegram radar runtime
+backend/telegram-radar/seen_tweets.json
+backend/telegram-radar/stats.json
+backend/telegram-radar/radar.log
+
+# Build / deploy
+.netlify
+dist/
