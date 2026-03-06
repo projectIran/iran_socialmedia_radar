@@ -1,0 +1,15 @@
+{
+  "name": "iran-socialmedia-radar",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Monorepo: Social Media Radar (Iran) — frontend, backend, and tools",
+  "scripts": {
+    "dev": "pnpm --filter frontend dev",
+    "build": "pnpm --filter frontend build",
+    "start": "pnpm --filter frontend start",
+    "lint": "pnpm --filter frontend lint"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

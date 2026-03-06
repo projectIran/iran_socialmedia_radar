@@ -1,39 +1,42 @@
-# Social Media Radar
+# Iran Social Media Radar
 
-Social Media Radar is a Next.js 16 + Tailwind CSS experience that visualizes two curated groups of public figures—global progressive voices and Iran liberation advocates. Each person appears as an interactive ringed portrait; selecting a face opens a modal with social handles and a ready-to-copy advocacy email template.
+Monorepo for the Iran Social Media Radar: frontend and backend services.
 
-## Tech Stack
-- **Framework:** Next.js 16 (App Router, Turbopack)
-- **Language:** TypeScript + React 19
-- **Styling:** Tailwind CSS 4 with custom gradients
-- **Tooling:** pnpm, Radix-inspired UI patterns
+## Project structure
 
-## Local Development
+| Folder | Description |
+|--------|-------------|
+| **[`frontend/`](frontend/README.md)** | Next.js 16 app — figure radar (global progressives and Iran liberation advocates), modal, and email template |
+| **[`backend/`](backend/README.md)** | Backend services (each run separately): |
+| → **[`backend/social-media-radar/`](backend/social-media-radar/README.md)** | Legacy: FastAPI + Vanilla JS, JSON data, LLM-based email generation API |
+| → **[`backend/telegram-radar/`](backend/telegram-radar/README.md)** | Python bot that monitors X (Twitter) trends and forwards posts to Telegram |
+
+---
+
+## Quick start
+
+### Frontend (Next.js)
+
+From the **repo root**:
+
 ```bash
 pnpm install
-pnpm dev        # starts Next.js on http://localhost:3000
-
-pnpm run build  # generates the production build
-pnpm start      # serves the build (run build first)
+pnpm dev        # runs frontend at http://localhost:3000
+pnpm build      # production build
+pnpm start      # serve the build (run after build)
 ```
 
-## Project Structure
-- `app/page.tsx` — single-page experience, figure data, UI components
-- `components/` — shared UI helpers
-- `public/` — static assets (icons, placeholder avatars)
-- `styles/` — Tailwind entry point and global styles
+See **[frontend/README.md](frontend/README.md)** for details.
+
+### Backend
+
+Each backend project is independent. See **[backend/README.md](backend/README.md)** for an overview and links to:
+
+- **social-media-radar:** [backend/social-media-radar/README.md](backend/social-media-radar/README.md) — `pip install -r requirements.txt && python server.py`
+- **telegram-radar:** [backend/telegram-radar/README.md](backend/telegram-radar/README.md) — install, env setup, and run instructions
+
+---
 
 ## Contributing
-Issues and pull requests are welcome. Please describe the motivation, include screenshots for visual tweaks, and mention any new dependencies.
 
-## #TODO Suggestions
-1. **Image Hardening:** Cache every portrait under `public/` and swap hotlinked URLs for locally hosted assets to avoid CDN downtime.
-2. **Data Source Automation:** Move figure metadata into JSON/YAML (or a CMS) so updates do not require editing `app/page.tsx`.
-3. **Modal Content Expansion:** Add bios, recent tweets, and contact buttons sourced from reliable APIs.
-4. **Filtering & Search:** Let users filter by urgency, chamber, party, or tag via client-side controls.
-5. **Accessibility Review:** Audit keyboard flows, focus states, and contrast to meet WCAG 2.1 AA.
-6. **Responsive Polish:** Add pinch-to-zoom-friendly layouts and performance budgets for low-end devices.
-7. **Analytics & Telemetry:** Capture anonymized interactions to prioritize figures with low engagement.
-8. **Testing:** Introduce Playwright or Cypress smoke tests plus unit coverage for utilities like `getRadius`.
-
-If you tackle one of these, update this README with progress so newcomers can grab the next task.
+Issues and pull requests are welcome. For visual changes include screenshots; for new dependencies add a short explanation.

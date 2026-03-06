@@ -1,89 +1,89 @@
-# Telegram Radar - رادار تلگرامی
+# Telegram Radar
 
-بات مانیتورینگ که پست‌های ترند X (توییتر) درباره ایران/اسرائیل/آمریکا رو پیدا و به تلگرام ارسال می‌کنه.
+Bot that finds trending X (Twitter) posts about Iran/Israel/USA and sends them to Telegram.
 
-**طراحی شده برای حداقل مصرف API** — فقط ~۷,۲۰۰ خوانش در ماه (پلن Basic اجازه ۱۰,۰۰۰ میده)
+**Designed for minimal API usage** — ~7,200 reads/month (Basic plan allows 10,000).
 
-## موضوعات تحت نظر
+## Topics monitored
 
-- ایران و اسرائیل (حملات، درگیری نظامی)
-- ایران و آمریکا (تحریم‌ها، هسته‌ای، جنگ)
-- انقلاب ایران و اعتراضات
-- رضا پهلوی، خامنه‌ای، سپاه
+- Iran and Israel (attacks, military tensions)
+- Iran and USA (sanctions, nuclear, war)
+- Iran revolution and protests
+- Reza Pahlavi, Khamenei, IRGC
 
-## نصب
+## Install
 
 ```bash
 cd telegram-radar
 python -m venv .venv
-source .venv/bin/activate   # مک/لینوکس
+source .venv/bin/activate   # macOS/Linux
 pip install -r requirements.txt
 cp .env.example .env
 ```
 
-## تنظیمات (.env)
+## Configuration (.env)
 
-### ۱. توکن X API
-فقط `X_BEARER_TOKEN` لازمه (read-only، پست نمیذاره):
-- برو به [developer.x.com](https://developer.x.com)
-- Bearer Token رو کپی کن
+### 1. X API token
+Only `X_BEARER_TOKEN` is required (read-only, does not post):
+- Go to [developer.x.com](https://developer.x.com)
+- Copy the Bearer Token
 
-### ۲. بات تلگرام
-- توی تلگرام به `@BotFather` پیام بده
-- `/newbot` بزن و مراحل رو طی کن
-- توکن بات رو کپی کن → `TELEGRAM_BOT_TOKEN`
+### 2. Telegram bot
+- In Telegram, message `@BotFather`
+- Send `/newbot` and follow the steps
+- Copy the bot token → `TELEGRAM_BOT_TOKEN`
 
-### ۳. Chat ID تلگرام
-- بات رو به گروه یا کانال اضافه کن
-- یا از `@userinfobot` برای گرفتن Chat ID استفاده کن
-- Chat ID رو بذار → `TELEGRAM_CHAT_ID`
+### 3. Telegram Chat ID
+- Add the bot to a group or channel
+- Or use `@userinfobot` to get your Chat ID
+- Set it → `TELEGRAM_CHAT_ID`
 
-## اجرا
+## Run
 
 ```bash
-# اجرای مداوم (هر ۶۰ دقیقه چک می‌کنه)
+# Continuous run (checks every 60 minutes)
 python radar.py
 
-# فقط یکبار اجرا
+# Run once
 python radar.py --once
 
-# تست بدون ارسال به تلگرام
+# Test without sending to Telegram
 python radar.py --dry-run
 
-# تست یکبار بدون ارسال
+# Run once without sending
 python radar.py --once --dry-run
 ```
 
-## هزینه API
+## API cost
 
-| تنظیم | ریکوئست/روز | خوانش/ماه | وضعیت |
-|--------|-------------|-----------|-------|
-| هر ۶۰ دقیقه (پیشفرض) | ~۲۴ | ~۷,۲۰۰ | ✅ زیر سقف |
-| هر ۱۲۰ دقیقه | ~۱۲ | ~۳,۶۰۰ | ✅ خیلی ارزان |
-| هر ۳۰ دقیقه | ~۴۸ | ~۱۴,۴۰۰ | ⚠️ بالای سقف Basic |
+| Setting | Requests/day | Reads/month | Status |
+|---------|--------------|-------------|--------|
+| Every 60 min (default) | ~24 | ~7,200 | ✅ Under limit |
+| Every 120 min | ~12 | ~3,600 | ✅ Cheaper |
+| Every 30 min | ~48 | ~14,400 | ⚠️ Above Basic limit |
 
-> نکته: اگه بودجه API محدوده، `SEARCH_INTERVAL_MINUTES=120` بذار.
+> If API budget is tight, set `SEARCH_INTERVAL_MINUTES=120`.
 
-## اجرا روی سرور (۲۴/۷)
+## Run on server (24/7)
 
 ```bash
-# با nohup
+# With nohup
 nohup python radar.py > /dev/null 2>&1 &
 
-# یا با screen
+# Or with screen
 screen -S radar
 python radar.py
-# Ctrl+A, D برای detach
+# Ctrl+A, D to detach
 
-# یا با systemd service
+# Or with a systemd service
 ```
 
-## فایل‌ها
+## Files
 
-| فایل | توضیح |
-|------|-------|
-| `radar.py` | اسکریپت اصلی |
-| `.env` | تنظیمات (خصوصی) |
-| `seen_tweets.json` | کش توییت‌های دیده شده (خودکار) |
-| `stats.json` | آمار ارسال‌ها (خودکار) |
-| `radar.log` | لاگ فعالیت‌ها |
+| File | Description |
+|------|-------------|
+| `radar.py` | Main script |
+| `.env` | Configuration (private) |
+| `seen_tweets.json` | Cache of seen tweets (auto-generated) |
+| `stats.json` | Send stats (auto-generated) |
+| `radar.log` | Activity log |

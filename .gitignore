@@ -1,0 +1,37 @@
+# Dependencies
+node_modules/
+
+# Next.js / frontend
+.next/
+out/
+
+# Environment
+.env
+.env*.local
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# Logs and caches
+*.log
+.turbo
+pnpm-debug.log*
+
+# OS and IDE
+.DS_Store
+*.swp
+.idea/
+.vscode/
+
+# Telegram radar runtime
+backend/telegram-radar/seen_tweets.json
+backend/telegram-radar/stats.json
+backend/telegram-radar/radar.log
+
+# Build / deploy
+.netlify
+dist/
