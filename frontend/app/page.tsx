@@ -37,50 +37,20 @@ function getPhotoUrl(x_handle: string): string {
   return `/data/photos/${getHandleClean(x_handle).toLowerCase()}.jpg`
 }
 
-const EMAIL_THRESHOLD = 2
-
 function getInfluenceScore(person: Person): number {
   const base = person.priority === "high" ? 9.0 : person.priority === "medium" ? 7.5 : 5.0
   const frac = (person.name.length * 0.1) % 1
   return Math.round((base + frac) * 10) / 10
 }
 
-function sortPersons(
-  persons: Person[],
-  clickCounts: Record<string, number>
-): Person[] {
+function sortPersons(persons: Person[]): Person[] {
   return [...persons].sort((a, b) => {
-    const countA = clickCounts[getHandleClean(a.x_handle).toLowerCase()] ?? 0
-    const countB = clickCounts[getHandleClean(b.x_handle).toLowerCase()] ?? 0
-    const overA = countA >= EMAIL_THRESHOLD ? 1 : 0
-    const overB = countB >= EMAIL_THRESHOLD ? 1 : 0
-
-    if (overA !== overB) return overA - overB
-
-    if (!overA) {
-      if (countA !== countB) return countA - countB
-    } else {
-      if (countA !== countB) return countA - countB
-    }
-
     const prioOrder = { high: 0, medium: 1, low: 2 }
     if (prioOrder[a.priority] !== prioOrder[b.priority]) {
       return prioOrder[a.priority] - prioOrder[b.priority]
     }
     return a.name.localeCompare(b.name)
   })
-}
-
-async function trackEmailClick(handle: string): Promise<void> {
-  try {
-    await fetch("/api/email-clicks", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ handle }),
-    })
-  } catch {
-    // silently fail
-  }
 }
 
 function generateEmailClientSide(
@@ -186,12 +156,10 @@ function EmailTemplateModal({
   person,
   side,
   onClose,
-  onEmailSent,
 }: {
   person: Person
   side: Side
   onClose: () => void
-  onEmailSent?: () => void
 }) {
   const [userName, setUserName] = useState("")
   const [userCity, setUserCity] = useState("")
@@ -344,10 +312,6 @@ function EmailTemplateModal({
                 </button>
                 <a
                   href={`mailto:${person.email}?subject=${encodedSubject}&body=${encodedBody}`}
-                  onClick={() => {
-                    trackEmailClick(person.x_handle)
-                    onEmailSent?.()
-                  }}
                   className="rounded-xl px-2 py-2.5 text-xs font-medium text-white text-center transition-opacity hover:opacity-90"
                   style={{ backgroundColor: "#6b7280" }}
                 >
@@ -369,21 +333,15 @@ function PersonModal({
   person,
   side,
   onClose,
-  emailCount,
-  onEmailSent,
 }: {
   person: Person
   side: Side
   onClose: () => void
-  emailCount: number
-  onEmailSent: () => void
 }) {
   const [showEmail, setShowEmail] = useState(false)
   const accentColor = side === "antiwar" ? "#e74c5e" : "#2dd4a8"
   const lightBg = side === "antiwar" ? "#fdf0f0" : "#e6faf4"
   const handle = getHandleClean(person.x_handle)
-  const progress = Math.min((emailCount / EMAIL_THRESHOLD) * 100, 100)
-  const isOverThreshold = emailCount >= EMAIL_THRESHOLD
 
   return (
     <>
@@ -483,39 +441,17 @@ function PersonModal({
               </button>
             </div>
 
-            {/* Email count progress */}
-            <div className="mt-4 space-y-1.5">
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-neutral-500">
-                  Emails sent: <span className="font-semibold text-neutral-700">{emailCount}</span> / {EMAIL_THRESHOLD}
-                </span>
-                {isOverThreshold && (
-                  <span className="rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold text-green-700">
-                    Goal reached
-                  </span>
-                )}
-              </div>
-              <div className="h-1.5 w-full rounded-full bg-neutral-200 overflow-hidden">
-                <div
-                  className="h-full rounded-full transition-all duration-500"
-                  style={{
-                    width: `${progress}%`,
-                    backgroundColor: isOverThreshold ? "#22c55e" : accentColor,
-                  }}
-                />
-              </div>
-            </div>
+            {/* Status */}
+            <p className="mt-4 flex items-center gap-2 text-xs text-neutral-400">
+              <span className="h-1.5 w-1.5 rounded-full bg-green-400 animate-pulse" />
+              Redirecting to external account...
+            </p>
           </div>
         </div>
       </div>
 
       {showEmail && (
-        <EmailTemplateModal
-          person={person}
-          side={side}
-          onClose={() => setShowEmail(false)}
-          onEmailSent={onEmailSent}
-        />
+        <EmailTemplateModal person={person} side={side} onClose={() => setShowEmail(false)} />
       )}
     </>
   )
@@ -528,29 +464,27 @@ function AvatarCard({
   person,
   side,
   onClick,
-  emailCount,
 }: {
   person: Person
   side: Side
   onClick: () => void
-  emailCount: number
 }) {
   const accentColor = side === "antiwar" ? "#e74c5e" : "#2dd4a8"
-  const isOverThreshold = emailCount >= EMAIL_THRESHOLD
-  const opacity = isOverThreshold ? "opacity-50" : ""
 
   return (
     <button
       onClick={onClick}
-      className={`group relative flex flex-col items-center focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 rounded-lg p-1 transition-transform hover:scale-105 ${opacity}`}
+      className="group relative flex flex-col items-center focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 rounded-lg p-1 transition-transform hover:scale-105"
       style={{ width: 100 }}
     >
-      <span
-        className="absolute -top-1 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-full px-2 py-0.5 text-[9px] font-bold text-white"
-        style={{ backgroundColor: isOverThreshold ? "#22c55e" : accentColor }}
-      >
-        {isOverThreshold ? `✓ ${emailCount}` : `${emailCount} / ${EMAIL_THRESHOLD}`}
-      </span>
+      {person.priority === "high" && (
+        <span
+          className="absolute -top-1 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-full px-2 py-0.5 text-[9px] font-bold text-white"
+          style={{ backgroundColor: accentColor }}
+        >
+          Top Priority
+        </span>
+      )}
       <Avatar person={person} side={side} size={68} />
       <span className="mt-2 max-w-[90px] text-center text-[11px] font-medium leading-tight text-neutral-700 line-clamp-2">
         {person.name}
@@ -567,15 +501,11 @@ function PersonColumn({
   persons,
   side,
   search,
-  clickCounts,
-  onEmailSent,
 }: {
   title: string
   persons: Person[]
   side: Side
   search: string
-  clickCounts: Record<string, number>
-  onEmailSent: () => void
 }) {
   const [selectedPerson, setSelectedPerson] = useState<Person | null>(null)
 
@@ -589,22 +519,17 @@ function PersonColumn({
     )
   })
 
-  const sorted = sortPersons(filtered, clickCounts)
+  const sorted = sortPersons(filtered)
 
   const bgColor = side === "antiwar" ? "#fdf0f0" : "#e6faf4"
   const titleColor = side === "antiwar" ? "#c93a4b" : "#1aab88"
 
   const persianTitle = side === "antiwar"
-    ? "چهره‌های مخالف جهانی"
+    ? "چهره‌های مترقی جهانی"
     : "حامیان آزادی ایران"
   const subtitle = side === "antiwar"
     ? "Influential Social Media Voices"
     : "Most Influential Faces"
-
-  const totalPersons = filtered.length
-  const coveredCount = filtered.filter(
-    (p) => (clickCounts[getHandleClean(p.x_handle).toLowerCase()] ?? 0) >= EMAIL_THRESHOLD
-  ).length
 
   return (
     <div className="flex-1 py-6 px-4" style={{ backgroundColor: bgColor }}>
@@ -617,26 +542,9 @@ function PersonColumn({
       <p className="text-center text-sm font-semibold text-neutral-600 mb-1" dir="rtl">
         {persianTitle}
       </p>
-      <p className="text-center text-[11px] text-neutral-500 mb-2">
+      <p className="text-center text-[11px] text-neutral-500 mb-6">
         {subtitle}
       </p>
-
-      {/* Coverage stats */}
-      <div className="mx-auto mb-4 max-w-xs">
-        <div className="flex items-center justify-between text-[10px] text-neutral-500 mb-1">
-          <span>Coverage: {coveredCount}/{totalPersons}</span>
-          <span>{totalPersons > 0 ? Math.round((coveredCount / totalPersons) * 100) : 0}%</span>
-        </div>
-        <div className="h-1 w-full rounded-full bg-neutral-200 overflow-hidden">
-          <div
-            className="h-full rounded-full transition-all duration-700"
-            style={{
-              width: `${totalPersons > 0 ? (coveredCount / totalPersons) * 100 : 0}%`,
-              backgroundColor: titleColor,
-            }}
-          />
-        </div>
-      </div>
 
       {sorted.length === 0 ? (
         <p className="text-center text-sm text-neutral-400 py-8">No results found</p>
@@ -648,7 +556,6 @@ function PersonColumn({
               person={person}
               side={side}
               onClick={() => setSelectedPerson(person)}
-              emailCount={clickCounts[getHandleClean(person.x_handle).toLowerCase()] ?? 0}
             />
           ))}
         </div>
@@ -659,8 +566,6 @@ function PersonColumn({
           person={selectedPerson}
           side={side}
           onClose={() => setSelectedPerson(null)}
-          emailCount={clickCounts[getHandleClean(selectedPerson.x_handle).toLowerCase()] ?? 0}
-          onEmailSent={onEmailSent}
         />
       )}
     </div>
@@ -675,19 +580,6 @@ export default function SocialMediaRadar() {
   const [republicans, setRepublicans] = useState<Person[]>([])
   const [search, setSearch] = useState("")
   const [loading, setLoading] = useState(true)
-  const [clickCounts, setClickCounts] = useState<Record<string, number>>({})
-
-  const fetchClickCounts = useCallback(async () => {
-    try {
-      const res = await fetch("/api/email-clicks")
-      if (res.ok) {
-        const data = await res.json()
-        setClickCounts(data)
-      }
-    } catch {
-      // silently fail — counts will be empty, default sorting applies
-    }
-  }, [])
 
   useEffect(() => {
     Promise.all([
@@ -700,13 +592,7 @@ export default function SocialMediaRadar() {
       })
       .catch((err) => console.error("Failed to load data:", err))
       .finally(() => setLoading(false))
-
-    fetchClickCounts()
-  }, [fetchClickCounts])
-
-  const handleEmailSent = useCallback(() => {
-    setTimeout(fetchClickCounts, 500)
-  }, [fetchClickCounts])
+  }, [])
 
   return (
     <main className="min-h-screen" style={{ backgroundColor: "#f5f5f7", fontFamily: "Inter, sans-serif" }}>
@@ -756,8 +642,6 @@ export default function SocialMediaRadar() {
               persons={democrats}
               side="antiwar"
               search={search}
-              clickCounts={clickCounts}
-              onEmailSent={handleEmailSent}
             />
 
             {/* Vertical separator */}
@@ -773,8 +657,6 @@ export default function SocialMediaRadar() {
               persons={republicans}
               side="prowar"
               search={search}
-              clickCounts={clickCounts}
-              onEmailSent={handleEmailSent}
             />
           </div>
 
@@ -786,16 +668,12 @@ export default function SocialMediaRadar() {
                 persons={democrats}
                 side="antiwar"
                 search={search}
-                clickCounts={clickCounts}
-                onEmailSent={handleEmailSent}
               />
               <PersonColumn
                 title="IRAN LIBERATION ADVOCATES"
                 persons={republicans}
                 side="prowar"
                 search={search}
-                clickCounts={clickCounts}
-                onEmailSent={handleEmailSent}
               />
             </div>
             {/* Vertical separator overlay */}
