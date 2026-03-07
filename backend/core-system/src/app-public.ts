@@ -7,9 +7,17 @@ import { UserRepository } from './repositories/UserRepository';
 import { CoHostRepository } from './repositories/CoHostRepository';
 import { AuthService } from './services/AuthService';
 import { MeService } from './services/MeService';
+import { EmailCampaignRepository } from './repositories/EmailCampaignRepository';
+import { EmailCampaignParticipationRepository } from './repositories/EmailCampaignParticipationRepository';
+import { PetitionRepository } from './repositories/PetitionRepository';
+import { PetitionParticipationRepository } from './repositories/PetitionParticipationRepository';
+import { EmailCampaignService } from './services/EmailCampaignService';
+import { PetitionService } from './services/PetitionService';
 import { createLoadUser } from './middleware/auth';
 import { filterSpecByEntry } from './utils/swaggerSpecByEntry';
 import authRoutes from './routes/auth';
+import emailCampaignsRoutes from './routes/emailCampaigns';
+import petitionsRoutes from './routes/petitions';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -18,6 +26,13 @@ const coHostRepo = new CoHostRepository();
 const authService = new AuthService(userRepo);
 const meService = new MeService(coHostRepo);
 const loadUser = createLoadUser(userRepo);
+
+const emailCampaignRepo = new EmailCampaignRepository();
+const emailCampaignParticipationRepo = new EmailCampaignParticipationRepository();
+const petitionRepo = new PetitionRepository();
+const petitionParticipationRepo = new PetitionParticipationRepository();
+const emailCampaignService = new EmailCampaignService(emailCampaignRepo, emailCampaignParticipationRepo);
+const petitionService = new PetitionService(petitionRepo, petitionParticipationRepo);
 
 const app: Express = express();
 app.use(express.json());
@@ -34,6 +49,8 @@ app.get('/', (_req, res) => {
 });
 
 app.use('/v1/auth', authRoutes(authService, meService, loadUser));
+app.use('/v1/email-campaigns', emailCampaignsRoutes(emailCampaignService));
+app.use('/v1/petitions', petitionsRoutes(petitionService));
 
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok' });

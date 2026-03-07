@@ -8,10 +8,22 @@ import { CoHostRepository } from './repositories/CoHostRepository';
 import { AuthService } from './services/AuthService';
 import { MeService } from './services/MeService';
 import { CoHostService } from './services/CoHostService';
+import { EmailCampaignRepository } from './repositories/EmailCampaignRepository';
+import { EmailCampaignParticipationRepository } from './repositories/EmailCampaignParticipationRepository';
+import { PetitionRepository } from './repositories/PetitionRepository';
+import { PetitionParticipationRepository } from './repositories/PetitionParticipationRepository';
+import { EmailCampaignService } from './services/EmailCampaignService';
+import { PetitionService } from './services/PetitionService';
 import { createLoadUser } from './middleware/auth';
+import { createRequirePermission } from './middleware/requirePermission';
 import authRoutes from './routes/auth';
 import coHostsRoutes from './routes/admin/coHosts';
 import permissionsRoutes from './routes/admin/permissions';
+import emailCampaignsAdminRoutes from './routes/admin/emailCampaigns';
+import petitionsAdminRoutes from './routes/admin/petitions';
+import emailCampaignsRoutes from './routes/emailCampaigns';
+import petitionsRoutes from './routes/petitions';
+import { PERMISSIONS } from './utils/permissions';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -21,6 +33,14 @@ const authService = new AuthService(userRepo);
 const meService = new MeService(coHostRepo);
 const coHostService = new CoHostService(userRepo, coHostRepo);
 const loadUser = createLoadUser(userRepo);
+
+const emailCampaignRepo = new EmailCampaignRepository();
+const emailCampaignParticipationRepo = new EmailCampaignParticipationRepository();
+const petitionRepo = new PetitionRepository();
+const petitionParticipationRepo = new PetitionParticipationRepository();
+const emailCampaignService = new EmailCampaignService(emailCampaignRepo, emailCampaignParticipationRepo);
+const petitionService = new PetitionService(petitionRepo, petitionParticipationRepo);
+const requireCampaignPermission = createRequirePermission(coHostRepo)(PERMISSIONS.EMAIL_CAMPAIGN);
 
 const app = express();
 app.use(express.json());
@@ -38,6 +58,10 @@ app.get('/', (req, res) => {
 app.use('/v1/auth', authRoutes(authService, meService, loadUser));
 app.use('/v1/admin/co-hosts', coHostsRoutes(coHostService, loadUser));
 app.use('/v1/admin/permissions', permissionsRoutes(loadUser));
+app.use('/v1/admin/email-campaigns', emailCampaignsAdminRoutes(emailCampaignService, loadUser, requireCampaignPermission));
+app.use('/v1/admin/petitions', petitionsAdminRoutes(petitionService, loadUser, requireCampaignPermission));
+app.use('/v1/email-campaigns', emailCampaignsRoutes(emailCampaignService));
+app.use('/v1/petitions', petitionsRoutes(petitionService));
 
 app.get('/health', (req, res) => {
   /* #swagger.tags = ['Health']
