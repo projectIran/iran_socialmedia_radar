@@ -46,6 +46,10 @@ if (existsSync(swaggerPath)) {
   app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(spec, { persistAuthorization: true } as Record<string, unknown>));
 }
 
+app.get('/', (_req, res) => {
+  res.redirect(302, '/api-docs');
+});
+
 app.use('/v1/admin/co-hosts', coHostsRoutes(coHostService, loadUser));
 app.use('/v1/admin/permissions', permissionsRoutes(loadUser));
 app.use('/v1/admin/email-campaigns', emailCampaignsAdminRoutes(emailCampaignService, loadUser, requireCampaignPermission));
