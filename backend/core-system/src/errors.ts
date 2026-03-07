@@ -24,6 +24,11 @@ export const ERROR_CATALOG: Record<string, ErrorCatalogEntry> = {
   LOAD_USER_FAILED: { status: 500, message: 'Failed to load user' },
   COHOST_LIST_FAILED: { status: 500, message: 'Failed to list co-hosts' },
   COHOST_ADD_FAILED: { status: 500, message: 'Failed to add co-host' },
+  CAMPAIGN_NOT_FOUND: { status: 404, message: 'Email campaign not found' },
+  PETITION_NOT_FOUND: { status: 404, message: 'Petition not found' },
+  PERSONALIZATION_FAILED: { status: 502, message: 'AI personalization failed' },
+  SHORTENER_FAILED: { status: 502, message: 'URL shortening failed' },
+  RATE_LIMIT_EXCEEDED: { status: 429, message: 'Too many requests' },
 };
 
 export const ERROR_CODES = Object.freeze(

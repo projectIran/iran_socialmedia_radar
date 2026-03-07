@@ -33,6 +33,10 @@ const doc = {
     { name: 'Auth', description: 'Register, login, and current user' },
     { name: 'Admin – Co-hosts', description: 'Manage co-hosts (admin only)' },
     { name: 'Health', description: 'Liveness' },
+    { name: 'Email Campaigns', description: 'List, view, generate email, participate (public)' },
+    { name: 'Admin – Email campaigns', description: 'CRUD email campaigns (admin)' },
+    { name: 'Petitions', description: 'List, view, participate (public)' },
+    { name: 'Admin – Petitions', description: 'CRUD petitions (admin)' },
   ],
   components: {
     securitySchemes: {

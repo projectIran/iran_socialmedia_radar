@@ -10,6 +10,8 @@
     "start": "node dist/swagger.js",
     "dev": "tsx src/swagger.ts",
     "dev:watch": "nodemon --exec tsx src/swagger.ts",
+    "dev:watch:public": "nodemon --exec ENTRY_POINT=public tsx src/swagger.ts",
+    "dev:watch:private": "nodemon --exec ENTRY_POINT=private tsx src/swagger.ts",
     "server": "node dist/server.js",
     "server:public": "ENTRY_POINT=public node dist/server.js",
     "server:private": "ENTRY_POINT=private node dist/server.js",

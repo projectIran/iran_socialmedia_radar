@@ -146,5 +146,6 @@ Use `PERMISSIONS.*` in code; validate in API with `COHOST_PERMISSIONS`.
 For a detailed description of the architecture (layers, services, repositories, dependency injection, and how to extend the app), see:
 
 - **[docs/design-pattern.md](docs/design-pattern.md)** — Design pattern & technical structure
+- **[docs/plans/email_campaign_petition.md](docs/plans/email_campaign_petition.md)** — Email Campaign & Petition system (spec, schema, API, admin/public split)
 
 Summary: **Routes** → **Services** (business logic) → **Repositories** (data access) → DB. Dependencies are wired once in `app.js`.
