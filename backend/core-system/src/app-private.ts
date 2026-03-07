@@ -55,4 +55,14 @@ app.get('/health', (_req, res) => {
   res.json({ status: 'ok' });
 });
 
+app.use((err: unknown, _req: express.Request, res: express.Response, next: (e?: unknown) => void) => {
+  if (err instanceof SyntaxError && !res.headersSent) {
+    res.status(400).json({
+      error: { code: 'INVALID_JSON', message: 'Invalid JSON in request body. Use \\n for newlines inside strings.', details: (err as Error).message },
+    });
+    return;
+  }
+  next(err);
+});
+
 export default app;

@@ -80,11 +80,21 @@ export class EmailCampaignService {
 
   async update(
     idOrCode: string,
-    data: Partial<Pick<EmailCampaignRow, 'title' | 'description' | 'is_active' | 'expires_at'>>
+    data: Partial<
+      Pick<EmailCampaignRow, 'title' | 'description' | 'email_to' | 'email_bcc' | 'subject_base' | 'body_base' | 'is_active' | 'expires_at'>
+    >
   ): Promise<EmailCampaignRow | null> {
     const row = await this.campaignRepo.findByIdOrCode(idOrCode);
     if (!row) return null;
-    return this.campaignRepo.update(row.id, data);
+    const payload: Parameters<EmailCampaignRepository['update']>[1] = { ...data };
+    if (data.email_to !== undefined || data.email_bcc !== undefined) {
+      const mailto = buildMailto(
+        data.email_to ?? row.email_to,
+        data.email_bcc !== undefined ? data.email_bcc : row.email_bcc
+      );
+      payload.link = await shortenUrl(mailto);
+    }
+    return this.campaignRepo.update(row.id, payload);
   }
 
   async delete(idOrCode: string): Promise<boolean> {

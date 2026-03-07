@@ -1,7 +1,8 @@
 import { Router, type Request, type Response } from 'express';
 import { param, validationResult } from 'express-validator';
 import { sendError, ERROR_CODES } from '../errors';
-import { getOrCreateSessionId } from '../utils/sessionId';
+import { getSessionId, getOrCreateSessionId } from '../utils/sessionId';
+import { defaultRateLimiter } from '../utils/rateLimiter';
 import type { EmailCampaignService } from '../services/EmailCampaignService';
 
 export default function emailCampaignsRoutes(service: EmailCampaignService): Router {
@@ -38,11 +39,22 @@ export default function emailCampaignsRoutes(service: EmailCampaignService): Rou
        #swagger.summary = 'Generate personalized email (subject, body) via AI'
        #swagger.responses[200] = { description: 'OK', content: { "application/json": { schema: { type: "object", properties: { subject: {}, body: {} } } } } }
        #swagger.responses[404] = { description: 'Campaign not found' }
+       #swagger.responses[429] = { description: 'Too many requests' }
     */
     const errors = validationResult(req);
     if (!errors.isEmpty()) return sendError(res, ERROR_CODES.VALIDATION_FAILED, { details: errors.array() });
+    const rateKey = getSessionId(req) ?? req.ip ?? req.socket?.remoteAddress ?? 'unknown';
+    const limit = defaultRateLimiter.checkLimit(rateKey);
+    if (!limit.allowed) {
+      res.setHeader('X-RateLimit-Limit', 10);
+      res.setHeader('X-RateLimit-Remaining', 0);
+      res.setHeader('Retry-After', Math.ceil((limit.resetAt - Date.now()) / 1000));
+      return sendError(res, ERROR_CODES.RATE_LIMIT_EXCEEDED);
+    }
     try {
       const result = await service.generateEmail(req.params.idOrCode);
+      res.setHeader('X-RateLimit-Limit', 10);
+      res.setHeader('X-RateLimit-Remaining', String(limit.remaining));
       return res.json(result);
     } catch (err: unknown) {
       const e = err as { code?: string };

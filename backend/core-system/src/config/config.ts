@@ -47,9 +47,11 @@ export interface Config {
   jwtSecret: string;
   jwtExpiresIn: string;
   cohostEncryptionKey: string | null;
-  /** Optional: URL shortener (e.g. Short.io, Bitly). If not set, long URL is returned as-is. */
+  /** Optional: URL shortener (e.g. shortio, bitly, tinyurl). If not set, long URL is returned as-is. */
   urlShortenerApiKey: string | null;
   urlShortenerProvider: string | null;
+  /** Required for Short.io: domain (e.g. go.example.com). Optional for other providers. */
+  urlShortenerDomain: string | null;
   /** Optional: AI for email personalization (e.g. OpenAI, Groq). If not set, generate-email may fail or return base. */
   aiApiKey: string | null;
   aiProvider: string | null;
@@ -66,6 +68,7 @@ export const config: Config = {
   cohostEncryptionKey: process.env.COHOST_ENCRYPTION_KEY || null,
   urlShortenerApiKey: process.env.URL_SHORTENER_API_KEY || null,
   urlShortenerProvider: process.env.URL_SHORTENER_PROVIDER || null,
+  urlShortenerDomain: process.env.URL_SHORTENER_DOMAIN || null,
   aiApiKey: process.env.AI_API_KEY || null,
   aiProvider: process.env.AI_PROVIDER || null,
 };

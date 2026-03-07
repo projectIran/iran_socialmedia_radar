@@ -30,3 +30,26 @@ export function buildMailto(to: string, bcc?: string | null): string {
   }
   return mailto;
 }
+
+export interface BuildMailtoFullOpts {
+  to: string;
+  bcc?: string | null;
+  subject?: string | null;
+  body?: string | null;
+}
+
+/**
+ * Build full mailto URL with to, optional bcc, subject, and body.
+ * Use for clients that open the mailer with pre-filled subject/body.
+ */
+export function buildMailtoFull(opts: BuildMailtoFullOpts): string {
+  const { to, bcc, subject, body } = opts;
+  if (!to || !String(to).trim()) return 'mailto:';
+  const base = 'mailto:' + encodeURIComponent(String(to).trim());
+  const params = new URLSearchParams();
+  if (bcc && String(bcc).trim()) params.set('bcc', String(bcc).trim());
+  if (subject != null && String(subject).trim()) params.set('subject', String(subject).trim());
+  if (body != null && String(body).trim()) params.set('body', String(body).trim());
+  const qs = params.toString();
+  return qs ? `${base}?${qs}` : base;
+}

@@ -60,7 +60,7 @@ export default function emailCampaignsAdminRoutes(
     body('email_bcc').optional().trim(),
     body('subject_base').optional().trim(),
     body('body_base').optional().trim(),
-    body('expires_at').optional().isISO8601().withMessage('expires_at must be ISO 8601 datetime (e.g. UTC: 2025-12-31T23:59:59Z)'),
+    body('expires_at').optional({ values: 'null' }).isISO8601().withMessage('expires_at must be ISO 8601 datetime (e.g. UTC: 2025-12-31T23:59:59Z)'),
     body('is_active').optional().isBoolean(),
     async (req: Request, res: Response) => {
       /* #swagger.tags = ['Admin – Email campaigns']
@@ -96,19 +96,33 @@ export default function emailCampaignsAdminRoutes(
     param('idOrCode').notEmpty().trim(),
     body('title').optional().trim(),
     body('description').optional().trim(),
+    body('email_to').optional().trim(),
+    body('email_bcc').optional().trim(),
+    body('subject_base').optional().trim(),
+    body('body_base').optional().trim(),
     body('is_active').optional().isBoolean(),
-    body('expires_at').optional().isISO8601().withMessage('expires_at must be ISO 8601 datetime (e.g. UTC: 2025-12-31T23:59:59Z)'),
+    body('expires_at').optional({ values: 'null' }).isISO8601().withMessage('expires_at must be ISO 8601 datetime (e.g. UTC: 2025-12-31T23:59:59Z)'),
     async (req: Request, res: Response) => {
       /* #swagger.tags = ['Admin – Email campaigns']
-         #swagger.summary = 'Update email campaign'
+         #swagger.summary = 'Update email campaign (partial: only sent fields are updated)'
          #swagger.security = [{ bearerAuth: [] }]
+         #swagger.requestBody = { content: { "application/json": { schema: { type: "object", properties: { title: {}, description: {}, email_to: {}, email_bcc: {}, subject_base: {}, body_base: {}, expires_at: {}, is_active: {} } } } } }
          #swagger.responses[200] = { description: 'OK' }
          #swagger.responses[404] = { description: 'Not found' }
       */
       const errors = validationResult(req);
       if (!errors.isEmpty()) return sendError(res, ERROR_CODES.VALIDATION_FAILED, { details: errors.array() });
-      const { title, description, is_active, expires_at } = req.body;
-      const row = await service.update(req.params.idOrCode, { title, description, is_active, expires_at });
+      const { title, description, email_to, email_bcc, subject_base, body_base, is_active, expires_at } = req.body;
+      const row = await service.update(req.params.idOrCode, {
+        title,
+        description,
+        email_to,
+        email_bcc,
+        subject_base,
+        body_base,
+        is_active,
+        expires_at,
+      });
       if (!row) return sendError(res, ERROR_CODES.CAMPAIGN_NOT_FOUND);
       return res.json(row);
     }

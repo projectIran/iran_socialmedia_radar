@@ -71,4 +71,19 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
 });
 
+// Return JSON for JSON parse errors (invalid request body) instead of HTML
+app.use((err: unknown, _req: Request, res: Response, next: (e?: unknown) => void) => {
+  if (err instanceof SyntaxError && !res.headersSent) {
+    res.status(400).json({
+      error: {
+        code: 'INVALID_JSON',
+        message: 'Invalid JSON in request body. Use \\n for newlines inside strings.',
+        details: (err as Error).message,
+      },
+    });
+    return;
+  }
+  next(err);
+});
+
 export default app;

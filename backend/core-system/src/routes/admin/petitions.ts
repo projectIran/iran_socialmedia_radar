@@ -57,7 +57,7 @@ export default function petitionsAdminRoutes(
     body('title').trim().notEmpty(),
     body('link').trim().notEmpty(),
     body('description').optional().trim(),
-    body('expires_at').optional().isISO8601().withMessage('expires_at must be ISO 8601 datetime (e.g. UTC: 2025-12-31T23:59:59Z)'),
+    body('expires_at').optional({ values: 'null' }).isISO8601().withMessage('expires_at must be ISO 8601 datetime (e.g. UTC: 2025-12-31T23:59:59Z)'),
     body('is_active').optional().isBoolean(),
     async (req: Request, res: Response) => {
       /* #swagger.tags = ['Admin – Petitions']
@@ -91,7 +91,7 @@ export default function petitionsAdminRoutes(
     body('title').optional().trim(),
     body('description').optional().trim(),
     body('is_active').optional().isBoolean(),
-    body('expires_at').optional().isISO8601().withMessage('expires_at must be ISO 8601 datetime (e.g. UTC: 2025-12-31T23:59:59Z)'),
+    body('expires_at').optional({ values: 'null' }).isISO8601().withMessage('expires_at must be ISO 8601 datetime (e.g. UTC: 2025-12-31T23:59:59Z)'),
     async (req: Request, res: Response) => {
       /* #swagger.tags = ['Admin – Petitions']
          #swagger.summary = 'Update petition'

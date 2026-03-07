@@ -99,7 +99,12 @@ export class EmailCampaignRepository {
 
   async update(
     id: string,
-    data: Partial<Pick<EmailCampaignRow, 'title' | 'description' | 'is_active' | 'expires_at'>>
+    data: Partial<
+      Pick<
+        EmailCampaignRow,
+        'title' | 'description' | 'email_to' | 'email_bcc' | 'subject_base' | 'body_base' | 'link' | 'is_active' | 'expires_at'
+      >
+    >
   ): Promise<EmailCampaignRow | null> {
     const updates: string[] = [];
     const values: unknown[] = [];
@@ -111,6 +116,26 @@ export class EmailCampaignRepository {
     if (data.description !== undefined) {
       updates.push(`description = $${i++}`);
       values.push(data.description);
+    }
+    if (data.email_to !== undefined) {
+      updates.push(`email_to = $${i++}`);
+      values.push(data.email_to);
+    }
+    if (data.email_bcc !== undefined) {
+      updates.push(`email_bcc = $${i++}`);
+      values.push(data.email_bcc);
+    }
+    if (data.subject_base !== undefined) {
+      updates.push(`subject_base = $${i++}`);
+      values.push(data.subject_base);
+    }
+    if (data.body_base !== undefined) {
+      updates.push(`body_base = $${i++}`);
+      values.push(data.body_base);
+    }
+    if (data.link !== undefined) {
+      updates.push(`link = $${i++}`);
+      values.push(data.link);
     }
     if (data.is_active !== undefined) {
       updates.push(`is_active = $${i++}`);

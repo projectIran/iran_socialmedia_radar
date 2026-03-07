@@ -1,16 +1,39 @@
-import { config } from '../config/config';
+import fetch from 'node-fetch';
+import { AI_PROVIDERS, getCurrentAiProvider } from './aiProviders.js';
 
-export interface AiPersonalizationResult {
-  subject: string;
-  body: string;
+/**
+ * Personalize email subject and body for a single user (slight variation to reduce spam appearance).
+ * Uses configured AI provider (GEMINI / GROQ / OPENAI via AI_PROVIDER env).
+ * On failure returns base subject/body unchanged.
+ *
+ * This module is intentionally standalone so it can be reused in other projects.
+ */
+export async function personalizeEmailContent(baseSubject, baseBody) {
+  const aiProvider = getCurrentAiProvider();
+  let result = null;
+  try {
+    switch (aiProvider) {
+      case AI_PROVIDERS.GEMINI:
+        result = await personalizeEmailWithGemini(baseSubject, baseBody);
+        break;
+      case AI_PROVIDERS.GROQ:
+        result = await personalizeEmailWithGroq(baseSubject, baseBody);
+        break;
+      case AI_PROVIDERS.OPENAI:
+        result = await personalizeEmailWithOpenAI(baseSubject, baseBody);
+        break;
+      default:
+        result = await personalizeEmailWithGemini(baseSubject, baseBody);
+    }
+  } catch (e) {
+    console.warn('personalizeEmailContent error:', e?.message);
+  }
+  return result && result.subject != null && result.body != null
+    ? result
+    : { subject: baseSubject || '', body: baseBody || '' };
 }
 
-const AI_PROVIDERS = Object.freeze({
-  GEMINI: 'gemini',
-  GROQ: 'groq',
-  OPENAI: 'openai',
-});
-
+// Prompt used across providers for email personalization
 const EMAIL_PERSONALIZE_PROMPT = `You are rewriting an email so it looks like a unique, human-written message—not a copy-paste or bulk template. Each version should feel as if a different person wrote it, while keeping the same core message and intent.
 
 Rules:
@@ -28,25 +51,22 @@ Formatting for the body:
 Output ONLY valid JSON with exactly two keys: "subject" and "body". No markdown code blocks, no explanation outside the JSON.
 Example: {"subject":"...","body":"First paragraph.\\n\\nSecond paragraph.\\n\\nClosing."}`;
 
-function parseEmailPersonalizationJson(text: string | null | undefined): AiPersonalizationResult | null {
+// ----- Shared JSON parsing helper -----
+
+function parseEmailPersonalizationJson(text) {
   if (!text || typeof text !== 'string') return null;
-  const trimmed = text.trim().replace(/^```json?\s*|\s*```$/g, '');
+  const trimmed = text.trim().replace(/^```json?\\s*|\\s*```$/g, '');
   try {
-    const o = JSON.parse(trimmed) as { subject?: unknown; body?: unknown };
-    if (o && typeof o.subject === 'string' && typeof o.body === 'string') return { subject: o.subject, body: o.body };
-  } catch {
-    // ignore
-  }
+    const o = JSON.parse(trimmed);
+    if (o && typeof o.subject === 'string' && typeof o.body === 'string') return o;
+  } catch (_) {}
   return null;
 }
 
-function getCurrentAiProvider(): string {
-  const raw = config.aiProvider || AI_PROVIDERS.GEMINI;
-  return String(raw).toLowerCase();
-}
+// ----- Provider-specific implementations -----
 
-async function personalizeWithGemini(baseSubject: string, baseBody: string): Promise<AiPersonalizationResult | null> {
-  const apiKey = config.aiApiKey;
+async function personalizeEmailWithGemini(baseSubject, baseBody) {
+  const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) return null;
   const prompt = `${EMAIL_PERSONALIZE_PROMPT}\n\nBase subject:\n${baseSubject || ''}\n\nBase body:\n${baseBody || ''}`;
   const response = await fetch(
@@ -61,13 +81,13 @@ async function personalizeWithGemini(baseSubject: string, baseBody: string): Pro
     }
   );
   if (!response.ok) return null;
-  const data = (await response.json()) as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
+  const data = await response.json();
   const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
   return parseEmailPersonalizationJson(text);
 }
 
-async function personalizeWithGroq(baseSubject: string, baseBody: string): Promise<AiPersonalizationResult | null> {
-  const apiKey = config.aiApiKey;
+async function personalizeEmailWithGroq(baseSubject, baseBody) {
+  const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) return null;
   const prompt = `${EMAIL_PERSONALIZE_PROMPT}\n\nBase subject:\n${baseSubject || ''}\n\nBase body:\n${baseBody || ''}`;
   const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
@@ -81,13 +101,13 @@ async function personalizeWithGroq(baseSubject: string, baseBody: string): Promi
     }),
   });
   if (!response.ok) return null;
-  const data = (await response.json()) as { choices?: Array<{ message?: { content?: string } }> };
+  const data = await response.json();
   const text = data.choices?.[0]?.message?.content;
   return parseEmailPersonalizationJson(text);
 }
 
-async function personalizeWithOpenAI(baseSubject: string, baseBody: string): Promise<AiPersonalizationResult | null> {
-  const apiKey = config.aiApiKey;
+async function personalizeEmailWithOpenAI(baseSubject, baseBody) {
+  const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) return null;
   const prompt = `${EMAIL_PERSONALIZE_PROMPT}\n\nBase subject:\n${baseSubject || ''}\n\nBase body:\n${baseBody || ''}`;
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -101,42 +121,8 @@ async function personalizeWithOpenAI(baseSubject: string, baseBody: string): Pro
     }),
   });
   if (!response.ok) return null;
-  const data = (await response.json()) as { choices?: Array<{ message?: { content?: string } }> };
+  const data = await response.json();
   const text = data.choices?.[0]?.message?.content;
   return parseEmailPersonalizationJson(text);
 }
 
-/**
- * Generate personalized (subject, body) from base using configured AI provider (Gemini, Groq, OpenAI).
- * If no AI key/provider, returns base as-is. On API failure, returns base unchanged.
- */
-export async function generatePersonalizedEmail(
-  subjectBase: string,
-  bodyBase: string
-): Promise<AiPersonalizationResult> {
-  const subject = (subjectBase || '').trim() || 'No subject';
-  const body = (bodyBase || '').trim() || '';
-  if (!config.aiApiKey || !config.aiProvider) {
-    return { subject, body };
-  }
-  const provider = getCurrentAiProvider();
-  let result: AiPersonalizationResult | null = null;
-  try {
-    switch (provider) {
-      case AI_PROVIDERS.GEMINI:
-        result = await personalizeWithGemini(subjectBase, bodyBase);
-        break;
-      case AI_PROVIDERS.GROQ:
-        result = await personalizeWithGroq(subjectBase, bodyBase);
-        break;
-      case AI_PROVIDERS.OPENAI:
-        result = await personalizeWithOpenAI(subjectBase, bodyBase);
-        break;
-      default:
-        result = await personalizeWithGemini(subjectBase, bodyBase);
-    }
-  } catch (e) {
-    console.warn('generatePersonalizedEmail error:', (e as Error)?.message);
-  }
-  return result && result.subject != null && result.body != null ? result : { subject, body };
-}
