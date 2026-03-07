@@ -1,11 +1,7 @@
----
-name: Email Campaign Petition Backend
-overview: "Two separate systems in core-system: (1) Email Campaigns – mailto, AI-generated content on demand (no user storage), optional session-based participation; (2) Petitions – single link, optional participation count. No userId dependency for public flows; separate tables and API prefixes for each."
-todos: []
-isProject: false
----
-
 # Email Campaign & Petition — Implementation Plan (Revised)
+
+**Document:** Email Campaign Petition Backend  
+**Overview:** Two separate systems in core-system: (1) **Email Campaigns** — mailto, AI-generated content on demand (no user storage), optional session-based participation; (2) **Petitions** — single link, optional participation count. No userId dependency for public flows; separate tables and API prefixes for each.
 
 ## Design decisions (from discussion)
 
@@ -18,7 +14,7 @@ isProject: false
 
 - **Where:** Same backend as core-system ([backend/core-system](backend/core-system)): same DB, same Express app.
 - **Auth:** Admin endpoints use `requirePermission(PERMISSIONS.EMAIL_CAMPAIGN)` or `requireAdmin` ([src/utils/permissions.ts](backend/core-system/src/utils/permissions.ts)). Public endpoints (list, by-code, view, generate-email, participate) use no auth or optional session for participation; no `user_id` in any of the new public-facing tables.
-- **API prefixes:** `/v1/email-campaigns` and `/v1/petitions` (separate resources).
+- **API prefixes:** Public: `/v1/email-campaigns`, `/v1/petitions`. Admin: `/v1/admin/email-campaigns`, `/v1/admin/petitions` (same structure as co-hosts).
 
 ---
 
@@ -26,17 +22,38 @@ isProject: false
 
 ### A.1 Database schema (email campaigns only)
 
-All primary and foreign keys use **UUID** (e.g. `gen_random_uuid()`), consistent with [src/db/schema.ts](backend/core-system/src/db/schema.ts) (users, co_hosts).
+All primary and foreign keys use **UUID** (e.g. `gen_random_uuid()`), consistent with `src/db/schema.ts` (users, co_hosts). Use **TIMESTAMPTZ** for `expires_at` (UTC).
 
-- **email_campaigns**  
-  `id` UUID PRIMARY KEY DEFAULT gen_random_uuid(), `title` VARCHAR(255) NOT NULL, `description` TEXT, `link` TEXT (shortened mailto: to + bcc only), `expires_at` TIMESTAMP, `is_active` BOOLEAN DEFAULT TRUE, `email_to` TEXT NOT NULL, `email_bcc` TEXT, `subject_base` TEXT, `body_base` TEXT, `direct_link_code` VARCHAR(24) UNIQUE NOT NULL, `created_at` TIMESTAMP DEFAULT NOW().
+**email_campaigns**
 
-- **email_campaign_attachments** (optional)  
-  `id` UUID PRIMARY KEY DEFAULT gen_random_uuid(), `campaign_id` UUID NOT NULL REFERENCES email_campaigns(id) ON DELETE CASCADE, `file_path` TEXT, `display_order` INTEGER DEFAULT 0, `created_at` TIMESTAMP DEFAULT NOW().
+| Column | Type | Notes |
+|--------|------|--------|
+| id | UUID | PRIMARY KEY DEFAULT gen_random_uuid() |
+| title | VARCHAR(255) | NOT NULL |
+| description | TEXT | optional |
+| link | TEXT | shortened mailto (to + bcc only) |
+| expires_at | TIMESTAMPTZ | optional, UTC |
+| is_active | BOOLEAN | DEFAULT TRUE |
+| email_to | TEXT | NOT NULL |
+| email_bcc | TEXT | optional |
+| subject_base | TEXT | optional |
+| body_base | TEXT | optional |
+| direct_link_code | VARCHAR(24) | UNIQUE NOT NULL |
+| created_at | TIMESTAMP | DEFAULT NOW() |
 
-- **email_campaign_participations** (optional, no user_id)  
-  For simple count / dedup by session. Example: `id` UUID PRIMARY KEY DEFAULT gen_random_uuid(), `campaign_id` UUID NOT NULL REFERENCES email_campaigns(id) ON DELETE CASCADE, `session_id` VARCHAR(64) NOT NULL (or `ip_hash`), `participated_at` TIMESTAMP DEFAULT NOW(), UNIQUE(campaign_id, session_id).  
-  No reference to `users` table. If you prefer no participation tracking at all, omit this table and do not expose a count.
+**email_campaign_attachments** (optional)
+
+| Column | Type | Notes |
+|--------|------|--------|
+| id | UUID | PRIMARY KEY |
+| campaign_id | UUID | FK → email_campaigns ON DELETE CASCADE |
+| file_path | TEXT | |
+| display_order | INTEGER | DEFAULT 0 |
+| created_at | TIMESTAMP | DEFAULT NOW() |
+
+**email_campaign_participations** (optional, no user_id)
+
+Simple count / dedup by session. Columns: `id` UUID, `campaign_id` UUID FK, `session_id` VARCHAR(64) NOT NULL, `participated_at` TIMESTAMP DEFAULT NOW(), UNIQUE(campaign_id, session_id). No reference to `users` table.
 
 No table for per-user email versions; AI is stateless.
 
@@ -63,20 +80,26 @@ No table for per-user email versions; AI is stateless.
 
 ### A.6 REST API (email campaigns)
 
-- **Admin** (requireAuth + requirePermission('email_campaign') or requireAdmin):
-  - `POST /v1/email-campaigns` — body: title, description?, email_to, email_bcc?, subject_base?, body_base?, expires_at?, is_active?. Build mailto, shorten, set link; generate direct_link_code. Response: `id`, `direct_link_code`, `link`, ...
-  - `GET /v1/email-campaigns` — query `active_only`?; list with optional participation_count.
-  - `GET /v1/email-campaigns/:id`
-  - `PATCH /v1/email-campaigns/:id` — e.g. is_active, expires_at, title, description.
-  - `DELETE /v1/email-campaigns/:id`
+**Admin** (under `/v1/admin/email-campaigns`, requireAuth + requirePermission('email_campaign') or requireAdmin)
 
-- **Public** (no auth for read; optional session for participate):
-  - `GET /v1/email-campaigns` — list: returns only active and not-expired campaigns (no `/active` in URL; backend filters by state).
-  - `GET /v1/email-campaigns/:idOrCode` — **unified lookup:** backend resolves by UUID (id) or by `direct_link_code`; if param looks like UUID, try by id first, else try by code. Return 404 if not found or inactive/expired. Response: campaign payload (link, email_to, email_bcc, subject_base, body_base).
-  - `POST /v1/email-campaigns/:idOrCode/generate-email` — same resolution for :idOrCode; then call AI, return `{ subject, body }`. Optional rate limit.
-  - `POST /v1/email-campaigns/:idOrCode/participate` — same resolution; idempotent record by session_id or skip.
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | / | Create campaign. Body: title, description?, email_to, email_bcc?, subject_base?, body_base?, expires_at? (ISO 8601 UTC), is_active?. Build mailto, shorten, set link; generate direct_link_code. |
+| GET | / | List campaigns. Query: `active_only`? (true = only active). Response includes participation_count. |
+| GET | /:idOrCode | Get one (by UUID or direct_link_code). |
+| PATCH | /:idOrCode | Update (e.g. is_active, expires_at, title, description). |
+| DELETE | /:idOrCode | Hard delete. |
 
-No separate `/active` or `/by-code/:code` routes; one list and one lookup that accepts either id or code.
+**Public** (under `/v1/email-campaigns`, no auth)
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | / | List active and not-expired only. |
+| GET | /:idOrCode | Unified lookup by id or direct_link_code. 404 if not found or inactive/expired. |
+| POST | /:idOrCode/generate-email | Call AI, return `{ subject, body }`. Optional rate limit. |
+| POST | /:idOrCode/participate | Idempotent record by session (e.g. X-Session-Id header). |
+
+No separate `/active` or `/by-code/:code`; one list and one lookup that accepts either id or code.
 
 ---
 
@@ -84,16 +107,24 @@ No separate `/active` or `/by-code/:code` routes; one list and one lookup that a
 
 ### B.1 Database schema (petitions only)
 
-All primary and foreign keys use **UUID**, same as email campaigns.
+All primary and foreign keys use **UUID**, same as email campaigns. Use **TIMESTAMPTZ** for `expires_at` (UTC).
 
-- **petitions**  
-  `id` UUID PRIMARY KEY DEFAULT gen_random_uuid(), `title` VARCHAR(255) NOT NULL, `description` TEXT, `link` TEXT NOT NULL (action URL), `direct_link_code` VARCHAR(24) UNIQUE NOT NULL, `expires_at` TIMESTAMP, `is_active` BOOLEAN DEFAULT TRUE, `created_at` TIMESTAMP DEFAULT NOW().
+**petitions**
 
-- **petition_attachments** (optional)  
-  `id` UUID PRIMARY KEY DEFAULT gen_random_uuid(), `petition_id` UUID NOT NULL REFERENCES petitions(id) ON DELETE CASCADE, `file_path` TEXT, `display_order` INTEGER DEFAULT 0, `created_at` TIMESTAMP DEFAULT NOW().
+| Column | Type | Notes |
+|--------|------|--------|
+| id | UUID | PRIMARY KEY DEFAULT gen_random_uuid() |
+| title | VARCHAR(255) | NOT NULL |
+| description | TEXT | optional |
+| link | TEXT | NOT NULL (action URL) |
+| direct_link_code | VARCHAR(24) | UNIQUE NOT NULL |
+| expires_at | TIMESTAMPTZ | optional, UTC |
+| is_active | BOOLEAN | DEFAULT TRUE |
+| created_at | TIMESTAMP | DEFAULT NOW() |
 
-- **petition_participations** (optional, no user_id)  
-  Same idea as email campaign: `id` UUID PRIMARY KEY DEFAULT gen_random_uuid(), `petition_id` UUID NOT NULL REFERENCES petitions(id) ON DELETE CASCADE, `session_id` VARCHAR(64) NOT NULL (or `ip_hash`), `participated_at` TIMESTAMP DEFAULT NOW(), UNIQUE(petition_id, session_id). Or omit and do not track.
+**petition_attachments** (optional): `id`, `petition_id` UUID FK, `file_path`, `display_order`, `created_at`.
+
+**petition_participations** (optional, no user_id): same pattern as email campaign (petition_id, session_id, UNIQUE).
 
 No email fields, no mailto, no AI.
 
@@ -109,17 +140,23 @@ No email fields, no mailto, no AI.
 
 ### B.4 REST API (petitions)
 
-- **Admin** (requireAuth + requirePermission('email_campaign') or requireAdmin — or introduce PERMISSIONS.PETITION if you want separate permission):
-  - `POST /v1/petitions` — body: title, description?, link, expires_at?, is_active?. Generate direct_link_code. Response: `id`, `direct_link_code`, `link`, ...
-  - `GET /v1/petitions` — query `active_only`?
-  - `GET /v1/petitions/:id`
-  - `PATCH /v1/petitions/:id`
-  - `DELETE /v1/petitions/:id`
+**Admin** (under `/v1/admin/petitions`, same permission as email campaigns)
 
-- **Public:**
-  - `GET /v1/petitions` — list: returns only active and not-expired petitions (no `/active` in URL).
-  - `GET /v1/petitions/:idOrCode` — **unified lookup:** resolve by UUID (id) or by `direct_link_code`; return 404 if not found or inactive/expired.
-  - `POST /v1/petitions/:idOrCode/participate` — same resolution; optional; idempotent by session.
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | / | Create. Body: title, description?, link, expires_at? (ISO 8601 UTC), is_active?. Generate direct_link_code. |
+| GET | / | List. Query: `active_only`?. |
+| GET | /:idOrCode | Get one. |
+| PATCH | /:idOrCode | Update. |
+| DELETE | /:idOrCode | Hard delete. |
+
+**Public** (under `/v1/petitions`)
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | / | List active and not-expired only. |
+| GET | /:idOrCode | Unified lookup by id or direct_link_code. 404 if not found or inactive/expired. |
+| POST | /:idOrCode/participate | Idempotent by session. |
 
 No separate `/active` or `/by-code/:code`; one list and one lookup by id or code.
 
@@ -129,10 +166,10 @@ No separate `/active` or `/by-code/:code`; one list and one lookup by id or code
 
 ### C.1 Entry points and Swagger
 
-- **Full app** ([app.ts](backend/core-system/src/app.ts)): mount both `/v1/email-campaigns` and `/v1/petitions` (admin + public routes).
-- **Public entry** ([app-public.ts](backend/core-system/src/app-public.ts)): mount only public routes for both (GET list, GET :idOrCode, POST :idOrCode/participate, and for campaigns POST :idOrCode/generate-email).
-- **Private entry** ([app-private.ts](backend/core-system/src/app-private.ts)): mount only admin routes for both.
-- **Swagger:** Tags e.g. "Email Campaigns – Admin", "Email Campaigns – Public", "Petitions – Admin", "Petitions – Public". Update [swaggerSpecByEntry.ts](backend/core-system/src/utils/swaggerSpecByEntry.ts) so public entry shows campaign + petition public paths, private shows admin paths.
+- **Full app** (`app.ts`): mount public at `/v1/email-campaigns`, `/v1/petitions` and admin at `/v1/admin/email-campaigns`, `/v1/admin/petitions` (like `/v1/admin/co-hosts`).
+- **Public entry** (`app-public.ts`): only public routes for campaigns and petitions (GET list, GET :idOrCode, POST participate, and for campaigns POST generate-email).
+- **Private entry** (`app-private.ts`): only admin routes under `/v1/admin/` (co-hosts, permissions, email-campaigns, petitions).
+- **Swagger:** Tags e.g. "Email Campaigns", "Admin – Email campaigns", "Petitions", "Admin – Petitions". Filter by entry so public doc shows public paths, private doc shows admin paths.
 
 ### C.2 Errors and config
 
@@ -159,10 +196,10 @@ No separate `/active` or `/by-code/:code`; one list and one lookup by id or code
 
 Use these when implementing so behavior and edge cases are consistent.
 
-### List: same path, behavior by auth
+### List: separate public vs admin
 
-- **GET /v1/email-campaigns** and **GET /v1/petitions** are the same path for both admin and public.
-- Inside the handler: if the request has admin auth (requirePermission/requireAdmin passed), list with optional query `active_only` (admin can see all or filter). If no admin auth (public), always return only active and not-expired items. No separate route for `/active`.
+- **Public:** `GET /v1/email-campaigns` and `GET /v1/petitions` return only active and not-expired items (no auth).
+- **Admin:** `GET /v1/admin/email-campaigns` and `GET /v1/admin/petitions` with auth; query `active_only=true` to filter. No separate route for `/active`.
 
 ### Resolving :idOrCode
 
@@ -173,19 +210,19 @@ Use these when implementing so behavior and edge cases are consistent.
 ### Session for participation (optional)
 
 - If you keep participation tables, identify the visitor by a **session id** (e.g. UUID) so the same browser is not double-counted.
-- **Source:** cookie (e.g. `session_id=…`) or header (e.g. `X-Session-Id`). Choose one; document in API.
+- **Source:** header `X-Session-Id` (or cookie if cookie-parser is added). Document in API.
 - **When missing:** either (a) create a new session id, set it in response cookie, and use it for the participation row, or (b) return 400 if participate is called without session. Prefer (a) for better UX.
 - Cookie options: HttpOnly, SameSite=Lax (or Strict), path=/, max-age as needed. No need to tie this to users table.
 
 ### Rate limit for generate-email
 
-- **Optional but recommended:** apply a rate limit on **POST /v1/email-campaigns/:idOrCode/generate-email** to avoid abuse (e.g. by IP or by session id).
+- **Optional but recommended:** apply a rate limit on **POST /v1/email-campaigns/:idOrCode/generate-email** to avoid abuse (e.g. by IP or session id).
 - Example: e.g. 10–20 requests per minute per IP (or per session). Use a small middleware (e.g. express-rate-limit or custom) only on this route. When limit exceeded, return 429 with a clear message.
 
 ### Validation
 
 - **:idOrCode** in route: accept non-empty string; resolution (UUID vs code) is done in service/repo. No need to validate UUID format in route validator if you resolve both ways.
-- Admin body (POST/PATCH): validate required fields (e.g. email_to for campaign create, link for petition create) and types; use existing express-validator pattern from [routes/admin/coHosts.ts](backend/core-system/src/routes/admin/coHosts.ts).
+- Admin body (POST/PATCH): validate required fields (e.g. email_to for campaign create, link for petition create). Use `expires_at` with `.optional().isISO8601()` for UTC datetime. Use existing express-validator pattern from `routes/admin/coHosts.ts`.
 
 ---
 
@@ -233,7 +270,7 @@ flowchart TB
 |-------|-----------------|-----------|
 | IDs | UUID (id, campaign_id FKs) | UUID (id, petition_id FKs) |
 | Tables | email_campaigns, email_campaign_attachments, optional email_campaign_participations | petitions, optional petition_attachments, optional petition_participations |
-| API prefix | /v1/email-campaigns (list + :idOrCode for get/actions) | /v1/petitions (list + :idOrCode for get/participate) |
+| API prefix | Public: /v1/email-campaigns. Admin: /v1/admin/email-campaigns | Public: /v1/petitions. Admin: /v1/admin/petitions |
 | User dependency | None (stateless AI; optional session-based participation) | None (optional session-based participation) |
 | AI | Generate on request; return to frontend; no DB storage | Not used |
 | Link | Shortened mailto (to + bcc only) | Single action URL (no shortening required unless desired) |
