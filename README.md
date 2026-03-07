@@ -8,6 +8,7 @@ Monorepo for the Iran Social Media Radar: frontend and backend services.
 |--------|-------------|
 | **[`frontend/`](frontend/README.md)** | Next.js 16 app — figure radar (global progressives and Iran liberation advocates), modal, and email template |
 | **[`backend/`](backend/README.md)** | Backend services (each run separately): |
+| → **[`backend/core-system/`](backend/core-system/README.md)** | Core backend: Node.js API (users, co-hosts, permissions). [Design pattern & architecture →](backend/core-system/docs/design-pattern.md) |
 | → **[`backend/telegram-radar/`](backend/telegram-radar/README.md)** | Python bot that monitors X (Twitter) trends and forwards posts to Telegram |
 
 ---
@@ -32,6 +33,7 @@ See **[frontend/README.md](frontend/README.md)** for details.
 
 Each backend project is independent. See **[backend/README.md](backend/README.md)** for an overview and links to:
 
+- **core-system:** [backend/core-system/README.md](backend/core-system/README.md) — Core API (auth, users, co-hosts). Technical structure: [backend/core-system/docs/design-pattern.md](backend/core-system/docs/design-pattern.md)
 - **telegram-radar:** [backend/telegram-radar/README.md](backend/telegram-radar/README.md) — install, env setup, and run instructions
 
 ---
@@ -53,4 +55,4 @@ If you tackle one of these, update this README with progress so newcomers can gr
 
 ## Contributing
 
-Issues and pull requests are welcome. For visual changes include screenshots; for new dependencies add a short explanation.
+Issues and pull requests are welcome. See **[CONTRIBUTING.md](CONTRIBUTING.md)** for how to work on a feature or bug (branching, build/lint checks, and what to do before opening a PR). For visual changes include screenshots; for new dependencies add a short explanation.
