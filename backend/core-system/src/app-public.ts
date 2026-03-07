@@ -1,8 +1,10 @@
 import express, { type Express } from 'express';
-import { readFileSync, existsSync } from 'fs';
+import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
+import { dirname } from 'path';
 import swaggerUi from 'swagger-ui-express';
+import { config } from './config/config';
+import { resolveSwaggerSpecPath } from './utils/swaggerSpecPath';
 import { UserRepository } from './repositories/UserRepository';
 import { CoHostRepository } from './repositories/CoHostRepository';
 import { AuthService } from './services/AuthService';
@@ -37,11 +39,14 @@ const petitionService = new PetitionService(petitionRepo, petitionParticipationR
 const app: Express = express();
 app.use(express.json());
 
-const swaggerPath = join(__dirname, '..', 'swagger-output.json');
-if (existsSync(swaggerPath)) {
+const swaggerPath = resolveSwaggerSpecPath(__dirname);
+if (swaggerPath) {
   const fullSpec = JSON.parse(readFileSync(swaggerPath, 'utf8'));
   const spec = filterSpecByEntry(fullSpec, 'public');
+  spec.servers = [{ url: `${config.baseUrl}/v1`, description: 'v1' }];
   app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(spec, { persistAuthorization: true } as Record<string, unknown>));
+} else {
+  console.warn('Swagger: swagger-output.json not found. Endpoints will not show in /api-docs. Use "npm start" or add "node dist/swagger.js --generate-only" to build.');
 }
 
 app.get('/', (_req, res) => {

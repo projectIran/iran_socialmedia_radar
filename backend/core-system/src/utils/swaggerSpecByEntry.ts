@@ -3,6 +3,7 @@ export type EntryPoint = 'public' | 'private';
 export interface OpenApiSpec {
   paths?: Record<string, unknown>;
   tags?: Array<{ name: string }>;
+  servers?: Array<{ url: string; description?: string }>;
 }
 
 /**

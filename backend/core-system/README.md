@@ -29,7 +29,7 @@ The OpenAPI spec is **generated at startup** from the route files (no hand-writt
 
 Scripts:
 
-- `npm run build` — Build with **tsup** (TypeScript → `dist/`). Use once before `npm start` or `npm run server`. Imports in source are extensionless (e.g. `from './pool'` not `./pool.js`).
+- `npm run build` — Build with **tsup** and generate **swagger-output.json** so `/api-docs` shows all endpoints (e.g. on Railway). Use once before `npm start` or `npm run server`.
 - `npm run typecheck` — Type-check only (`tsc --noEmit`).
 - `npm run dev` — Run with tsx (no build step); generates spec and starts server. Swagger UI at http://localhost:3000/api-docs.
 - `npm start` — Run compiled app: generate spec then start server (requires `npm run build` first).
@@ -47,9 +47,10 @@ You can run one process with all routes (`ENTRY_POINT=full`, default) or two pro
 | **public**  | `/v1/auth/*`, `/health`, `/api-docs` | Website, mobile; api.iranradar.org |
 | **private** | `/v1/admin/co-hosts`, `/health`, `/api-docs` | Admin/co-host panel; separate URL or internal |
 
-In both public and private entries, **GET /api-docs** (Swagger UI) shows only the endpoints for that entry (e.g. public = auth + health; private = admin co-hosts + health).
+In both public and private entries, **GET /api-docs** (Swagger UI) shows only the endpoints for that entry (e.g. public = auth + health + email campaigns + petitions; private = admin co-hosts + email campaigns + petitions + health). The **Servers** URL in Swagger is set from `BASE_URL` at runtime so staging/production show the correct base.
 
 - Same codebase, same DB and schema; no duplication. Set `ENTRY_POINT=public` or `ENTRY_POINT=private` in each container.
+- **Deploy (e.g. Railway):** Use **Start command** `npm start` (recommended) so the spec is regenerated with the correct `BASE_URL`. If you use `node dist/server.js`, the build step already generates `swagger-output.json`, so endpoints will still show; set `BASE_URL` in the service env so Swagger shows the right server.
 - JWT issued on the public entry is valid on the private entry as long as both use the same `JWT_SECRET`.
 
 ## Environment

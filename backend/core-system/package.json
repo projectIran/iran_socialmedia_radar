@@ -5,7 +5,7 @@
   "type": "module",
   "main": "dist/server.js",
   "scripts": {
-    "build": "tsup",
+    "build": "tsup && node dist/swagger.js --generate-only",
     "typecheck": "tsc --noEmit",
     "start": "node dist/swagger.js",
     "dev": "tsx src/swagger.ts",
