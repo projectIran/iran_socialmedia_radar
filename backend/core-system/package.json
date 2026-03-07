@@ -13,8 +13,8 @@
     "dev:watch:public": "nodemon --exec ENTRY_POINT=public tsx src/swagger.ts",
     "dev:watch:private": "nodemon --exec ENTRY_POINT=private tsx src/swagger.ts",
     "server": "node dist/server.js",
-    "server:public": "ENTRY_POINT=public node dist/server.js",
-    "server:private": "ENTRY_POINT=private node dist/server.js",
+    "server:public": "ENTRY_POINT=public node dist/swagger.js",
+    "server:private": "ENTRY_POINT=private node dist/swagger.js",
     "swagger": "tsx src/swagger.ts --generate-only",
     "generate-salt": "node dist/scripts/generate-salt.js"
   },
