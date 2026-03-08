@@ -11,6 +11,17 @@ pnpm build
 pnpm start
 ```
 
+## Environment variables
+
+| Variable | Required | Default | Description |
+|---------|----------|---------|-------------|
+| `NEXT_PUBLIC_API_URL` | No | `http://localhost:3001` | Public API base URL. Used for `/api/v1/*` rewrites (auth, email campaigns, petitions). |
+| `NEXT_PUBLIC_ADMIN_API_URL` | No | `http://localhost:3002` | Admin API base URL. Used for `/api/v1/admin/*` rewrites (co-hosts, admin email campaigns, admin petitions). |
+
+Create a `.env.local` (or set in your host) for staging/production, e.g.:
+
+
+
 ## Structure
 
 - `app/` — App Router pages, `page.tsx` and `layout.tsx`
