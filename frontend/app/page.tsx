@@ -629,7 +629,7 @@ function PersonColumn({
   search,
   clickCounts,
   onEmailSent,
-  defaultOpen = true,
+  defaultOpen = false,
 }: {
   title: string
   persons: Person[]
@@ -765,7 +765,7 @@ function PersonColumn({
 // Main Page
 // ------------------------------------------------------------------
 export default function SocialMediaRadar() {
-  const { user, role, logout } = useAuth()
+  const { user, logout } = useAuth()
   const [democrats, setDemocrats] = useState<Person[]>([])
   const [republicans, setRepublicans] = useState<Person[]>([])
   const [campaigns, setCampaigns] = useState<EmailCampaign[]>([])
@@ -839,16 +839,9 @@ export default function SocialMediaRadar() {
               className="flex-1 sm:w-60 rounded-full border border-neutral-200 bg-neutral-50 px-4 py-2 text-sm text-neutral-800 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-[#2dd4a8]/50 focus:border-[#2dd4a8]"
             />
             {user ? (
-              <>
-                {(role === "admin" || role === "cohost") && (
-                  <Link href="/admin" className="shrink-0 rounded-lg bg-neutral-800 px-3 py-2 text-xs font-semibold text-white hover:bg-neutral-700">
-                    Admin
-                  </Link>
-                )}
-                <button onClick={logout} className="shrink-0 rounded-lg bg-neutral-100 px-3 py-2 text-xs font-medium text-neutral-600 hover:bg-neutral-200">
-                  Logout
-                </button>
-              </>
+              <button onClick={logout} className="shrink-0 rounded-lg bg-neutral-100 px-3 py-2 text-xs font-medium text-neutral-600 hover:bg-neutral-200">
+                Logout
+              </button>
             ) : (
               <Link href="/login" className="shrink-0 rounded-lg bg-gradient-to-r from-[#2dd4a8] to-[#1aab88] px-3 py-2 text-xs font-semibold text-white hover:opacity-90">
                 Sign In
@@ -875,8 +868,8 @@ export default function SocialMediaRadar() {
               search={search}
               clickCounts={clickCounts}
               onEmailSent={handleEmailSent}
-              defaultOpen={false}
-            />
+            defaultOpen={true}
+          />
           </div>
 
           <div className="order-1 md:order-2">
@@ -887,7 +880,7 @@ export default function SocialMediaRadar() {
               search={search}
               clickCounts={clickCounts}
               onEmailSent={handleEmailSent}
-              defaultOpen={false}
+              defaultOpen={true}
             />
           </div>
         </div>

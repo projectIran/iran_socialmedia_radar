@@ -152,3 +152,127 @@ export function participatePetition(idOrCode: string) {
   )
 }
 
+// ── Admin: Email Campaigns ──
+
+export interface AdminEmailCampaign extends EmailCampaign {
+  participation_count: number
+}
+
+export interface CampaignInput {
+  title: string
+  email_to: string
+  description?: string
+  email_bcc?: string
+  subject_base?: string
+  body_base?: string
+  expires_at?: string | null
+  is_active?: boolean
+}
+
+export function adminGetCampaigns() {
+  return request<{ campaigns: AdminEmailCampaign[] }>("/v1/admin/email-campaigns")
+}
+
+export function adminGetCampaign(idOrCode: string) {
+  return request<AdminEmailCampaign>(`/v1/admin/email-campaigns/${idOrCode}`)
+}
+
+export function adminCreateCampaign(data: CampaignInput) {
+  return request<EmailCampaign>("/v1/admin/email-campaigns", {
+    method: "POST",
+    body: JSON.stringify(data),
+  })
+}
+
+export function adminUpdateCampaign(idOrCode: string, data: Partial<CampaignInput>) {
+  return request<EmailCampaign>(`/v1/admin/email-campaigns/${idOrCode}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  })
+}
+
+export function adminDeleteCampaign(idOrCode: string) {
+  return request<{ message: string }>(`/v1/admin/email-campaigns/${idOrCode}`, {
+    method: "DELETE",
+  })
+}
+
+// ── Admin: Petitions ──
+
+export interface AdminPetition extends Petition {
+  participation_count: number
+}
+
+export interface PetitionInput {
+  title: string
+  link: string
+  description?: string
+  expires_at?: string | null
+  is_active?: boolean
+}
+
+export function adminGetPetitions() {
+  return request<{ petitions: AdminPetition[] }>("/v1/admin/petitions")
+}
+
+export function adminGetPetition(idOrCode: string) {
+  return request<AdminPetition>(`/v1/admin/petitions/${idOrCode}`)
+}
+
+export function adminCreatePetition(data: PetitionInput) {
+  return request<Petition>("/v1/admin/petitions", {
+    method: "POST",
+    body: JSON.stringify(data),
+  })
+}
+
+export function adminUpdatePetition(idOrCode: string, data: Partial<PetitionInput>) {
+  return request<Petition>(`/v1/admin/petitions/${idOrCode}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  })
+}
+
+export function adminDeletePetition(idOrCode: string) {
+  return request<{ message: string }>(`/v1/admin/petitions/${idOrCode}`, {
+    method: "DELETE",
+  })
+}
+
+// ── Admin: Co-hosts ──
+
+export interface CoHost {
+  user_id: string
+  email: string
+  display_name: string | null
+}
+
+export function adminGetCoHosts() {
+  return request<{ co_hosts: CoHost[] }>("/v1/admin/co-hosts")
+}
+
+export function adminAddCoHost(data: { user_id?: string; email?: string; display_name?: string }) {
+  return request<{ message: string; co_host: CoHost }>("/v1/admin/co-hosts", {
+    method: "POST",
+    body: JSON.stringify(data),
+  })
+}
+
+export function adminRemoveCoHost(userId: string) {
+  return request<{ message: string }>(`/v1/admin/co-hosts/${userId}`, {
+    method: "DELETE",
+  })
+}
+
+export function adminGetCoHostPermissions(userId: string) {
+  return request<{ user_id: string; permissions: string[] }>(
+    `/v1/admin/co-hosts/${userId}/permissions`
+  )
+}
+
+export function adminUpdateCoHostPermissions(userId: string, permissions: string[]) {
+  return request<{ user_id: string; permissions: string[] }>(
+    `/v1/admin/co-hosts/${userId}/permissions`,
+    { method: "PUT", body: JSON.stringify({ permissions }) }
+  )
+}

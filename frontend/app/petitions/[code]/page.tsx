@@ -24,16 +24,18 @@ export default function PetitionDetailPage({
   }, [code])
 
   const handleSign = useCallback(async () => {
+    if (!petition?.link) return
     setSigning(true)
     try {
       await participatePetition(code)
       setSigned(true)
     } catch {
-      setError("Failed to sign petition")
+      // participation tracking failed silently
     } finally {
       setSigning(false)
     }
-  }, [code])
+    window.open(petition.link, "_blank")
+  }, [code, petition])
 
   if (loading) {
     return (

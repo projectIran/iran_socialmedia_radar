@@ -6,7 +6,7 @@ import { getPetitions, type Petition } from "@/lib/api"
 import { useAuth } from "@/lib/auth-context"
 
 export default function PetitionsPage() {
-  const { user, role, logout } = useAuth()
+  const { user, logout } = useAuth()
   const [petitions, setPetitions] = useState<Petition[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
@@ -41,16 +41,9 @@ export default function PetitionsPage() {
               Campaigns
             </Link>
             {user ? (
-              <>
-                {(role === "admin" || role === "cohost") && (
-                  <Link href="/admin" className="rounded-lg bg-neutral-800 px-3 py-2 text-xs font-semibold text-white hover:bg-neutral-700">
-                    Admin
-                  </Link>
-                )}
-                <button onClick={logout} className="rounded-lg bg-neutral-100 px-3 py-2 text-xs font-medium text-neutral-600 hover:bg-neutral-200">
-                  Logout
-                </button>
-              </>
+              <button onClick={logout} className="rounded-lg bg-neutral-100 px-3 py-2 text-xs font-medium text-neutral-600 hover:bg-neutral-200">
+                Logout
+              </button>
             ) : (
               <Link href="/login" className="rounded-lg bg-[#e74c5e] px-3 py-2 text-xs font-semibold text-white hover:opacity-90">
                 Sign In

@@ -1,0 +1,11 @@
+@import 'tailwindcss';
+
+@layer base {
+  * {
+    @apply border-neutral-200;
+  }
+  body {
+    @apply bg-[#f5f5f7] text-neutral-900 antialiased;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+}
