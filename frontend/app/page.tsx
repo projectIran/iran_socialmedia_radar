@@ -1,6 +1,8 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
+import Link from "next/link"
+import { useAuth } from "@/lib/auth-context"
 import emailData from "@/lib/emailData"
 
 interface Person {
@@ -671,6 +673,7 @@ function PersonColumn({
 // Main Page
 // ------------------------------------------------------------------
 export default function SocialMediaRadar() {
+  const { user, role, logout } = useAuth()
   const [democrats, setDemocrats] = useState<Person[]>([])
   const [republicans, setRepublicans] = useState<Person[]>([])
   const [search, setSearch] = useState("")
@@ -731,14 +734,36 @@ export default function SocialMediaRadar() {
             </div>
           </div>
 
-          <div className="w-full sm:w-auto">
+          <div className="flex items-center gap-3 w-full sm:w-auto">
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search by name, role, or handle..."
-              className="w-full sm:w-72 rounded-full border border-neutral-200 bg-neutral-50 px-4 py-2 text-sm text-neutral-800 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-[#2dd4a8]/50 focus:border-[#2dd4a8]"
+              className="flex-1 sm:w-60 rounded-full border border-neutral-200 bg-neutral-50 px-4 py-2 text-sm text-neutral-800 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-[#2dd4a8]/50 focus:border-[#2dd4a8]"
             />
+            <Link href="/campaigns" className="shrink-0 rounded-lg border border-neutral-200 px-3 py-2 text-xs font-medium text-neutral-600 hover:bg-neutral-50">
+              Campaigns
+            </Link>
+            <Link href="/petitions" className="shrink-0 rounded-lg border border-neutral-200 px-3 py-2 text-xs font-medium text-neutral-600 hover:bg-neutral-50">
+              Petitions
+            </Link>
+            {user ? (
+              <>
+                {(role === "admin" || role === "cohost") && (
+                  <Link href="/admin" className="shrink-0 rounded-lg bg-neutral-800 px-3 py-2 text-xs font-semibold text-white hover:bg-neutral-700">
+                    Admin
+                  </Link>
+                )}
+                <button onClick={logout} className="shrink-0 rounded-lg bg-neutral-100 px-3 py-2 text-xs font-medium text-neutral-600 hover:bg-neutral-200">
+                  Logout
+                </button>
+              </>
+            ) : (
+              <Link href="/login" className="shrink-0 rounded-lg bg-gradient-to-r from-[#2dd4a8] to-[#1aab88] px-3 py-2 text-xs font-semibold text-white hover:opacity-90">
+                Sign In
+              </Link>
+            )}
           </div>
         </div>
       </header>
