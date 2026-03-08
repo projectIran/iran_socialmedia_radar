@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react"
 import Link from "next/link"
 import { useAuth } from "@/lib/auth-context"
+import { getCampaigns, getPetitions, type EmailCampaign, type Petition } from "@/lib/api"
 import emailData from "@/lib/emailData"
 
 interface Person {
@@ -562,7 +563,64 @@ function AvatarCard({
 }
 
 // ------------------------------------------------------------------
-// Column
+// Stories Bar (Instagram-style for Campaigns & Petitions)
+// ------------------------------------------------------------------
+function StoriesBar({
+  campaigns,
+  petitions,
+}: {
+  campaigns: EmailCampaign[]
+  petitions: Petition[]
+}) {
+  const items = [
+    ...campaigns.map((c) => ({ type: "campaign" as const, id: c.id, title: c.title, code: c.direct_link_code, active: c.is_active })),
+    ...petitions.map((p) => ({ type: "petition" as const, id: p.id, title: p.title, code: p.direct_link_code, active: p.is_active })),
+  ]
+
+  if (items.length === 0) return null
+
+  return (
+    <div className="w-full overflow-x-auto px-4 py-4 border-b border-neutral-200/60 bg-white/50">
+      <div className="mx-auto max-w-[1400px]">
+        <div className="flex gap-4 min-w-max">
+          {items.map((item) => {
+            const isCampaign = item.type === "campaign"
+            const gradFrom = isCampaign ? "#2dd4a8" : "#e74c5e"
+            const gradTo = isCampaign ? "#1aab88" : "#c93a4b"
+            const icon = isCampaign
+              ? "M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+              : "M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+
+            return (
+              <Link
+                key={item.id}
+                href={isCampaign ? `/campaigns/${item.code}` : `/petitions/${item.code}`}
+                className="flex flex-col items-center gap-1.5 group"
+              >
+                <div
+                  className="flex h-16 w-16 items-center justify-center rounded-full p-[3px]"
+                  style={{ background: `linear-gradient(135deg, ${gradFrom}, ${gradTo})` }}
+                >
+                  <div className="flex h-full w-full items-center justify-center rounded-full bg-white group-hover:bg-neutral-50 transition-colors">
+                    <svg className="h-5 w-5" style={{ color: gradFrom }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d={icon} />
+                    </svg>
+                  </div>
+                </div>
+                <span className="max-w-[72px] text-center text-[10px] font-medium leading-tight text-neutral-600 line-clamp-2">
+                  {item.title}
+                </span>
+              </Link>
+            )
+          })}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ------------------------------------------------------------------
+// Collapsible Column (Dropdown/Accordion)
 // ------------------------------------------------------------------
 function PersonColumn({
   title,
@@ -571,6 +629,7 @@ function PersonColumn({
   search,
   clickCounts,
   onEmailSent,
+  defaultOpen = true,
 }: {
   title: string
   persons: Person[]
@@ -578,7 +637,9 @@ function PersonColumn({
   search: string
   clickCounts: Record<string, number>
   onEmailSent: () => void
+  defaultOpen?: boolean
 }) {
+  const [open, setOpen] = useState(defaultOpen)
   const [selectedPerson, setSelectedPerson] = useState<Person | null>(null)
 
   const filtered = persons.filter((p) => {
@@ -609,52 +670,83 @@ function PersonColumn({
   ).length
 
   return (
-    <div className="flex-1 py-6 px-4" style={{ backgroundColor: bgColor }}>
-      <h2
-        className="text-center text-xs font-bold uppercase tracking-widest mb-1"
-        style={{ color: titleColor }}
+    <div className="rounded-2xl overflow-hidden border border-neutral-200/60 shadow-sm">
+      {/* Dropdown header */}
+      <button
+        onClick={() => setOpen(!open)}
+        className="w-full flex items-center justify-between px-5 py-4 transition-colors hover:opacity-90"
+        style={{ backgroundColor: bgColor }}
       >
-        {title}
-      </h2>
-      <p className="text-center text-sm font-semibold text-neutral-600 mb-1" dir="rtl">
-        {persianTitle}
-      </p>
-      <p className="text-center text-[11px] text-neutral-500 mb-2">
-        {subtitle}
-      </p>
-
-      {/* Coverage stats */}
-      <div className="mx-auto mb-4 max-w-xs">
-        <div className="flex items-center justify-between text-[10px] text-neutral-500 mb-1">
-          <span>Coverage: {coveredCount}/{totalPersons}</span>
-          <span>{totalPersons > 0 ? Math.round((coveredCount / totalPersons) * 100) : 0}%</span>
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-full" style={{ backgroundColor: titleColor + "20" }}>
+            <svg className="h-5 w-5" style={{ color: titleColor }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              {side === "antiwar" ? (
+                <><circle cx="12" cy="12" r="10" /><path d="M2 12h20" /></>
+              ) : (
+                <><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></>
+              )}
+            </svg>
+          </div>
+          <div className="text-left">
+            <h2 className="text-sm font-bold uppercase tracking-wide" style={{ color: titleColor }}>
+              {title}
+            </h2>
+            <p className="text-xs text-neutral-500">
+              {persianTitle} · {subtitle}
+            </p>
+          </div>
         </div>
-        <div className="h-1 w-full rounded-full bg-neutral-200 overflow-hidden">
-          <div
-            className="h-full rounded-full transition-all duration-700"
-            style={{
-              width: `${totalPersons > 0 ? (coveredCount / totalPersons) * 100 : 0}%`,
-              backgroundColor: titleColor,
-            }}
-          />
+        <div className="flex items-center gap-3">
+          <span className="text-xs text-neutral-400">{coveredCount}/{totalPersons}</span>
+          <svg
+            className={`h-5 w-5 text-neutral-400 transition-transform duration-300 ${open ? "rotate-180" : ""}`}
+            viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+          >
+            <path d="M6 9l6 6 6-6" />
+          </svg>
+        </div>
+      </button>
+
+      {/* Collapsible content */}
+      <div
+        className={`transition-all duration-300 overflow-hidden ${open ? "max-h-[5000px] opacity-100" : "max-h-0 opacity-0"}`}
+        style={{ backgroundColor: bgColor }}
+      >
+        <div className="px-5 pb-5">
+          {/* Coverage bar */}
+          <div className="mx-auto mb-4 max-w-xs">
+            <div className="flex items-center justify-between text-[10px] text-neutral-500 mb-1">
+              <span>Coverage: {coveredCount}/{totalPersons}</span>
+              <span>{totalPersons > 0 ? Math.round((coveredCount / totalPersons) * 100) : 0}%</span>
+            </div>
+            <div className="h-1 w-full rounded-full bg-neutral-200 overflow-hidden">
+              <div
+                className="h-full rounded-full transition-all duration-700"
+                style={{
+                  width: `${totalPersons > 0 ? (coveredCount / totalPersons) * 100 : 0}%`,
+                  backgroundColor: titleColor,
+                }}
+              />
+            </div>
+          </div>
+
+          {sorted.length === 0 ? (
+            <p className="text-center text-sm text-neutral-400 py-8">No results found</p>
+          ) : (
+            <div className="flex flex-wrap justify-center gap-3">
+              {sorted.map((person) => (
+                <AvatarCard
+                  key={`${person.id}-${person.x_handle}`}
+                  person={person}
+                  side={side}
+                  onClick={() => setSelectedPerson(person)}
+                  emailCount={clickCounts[getHandleClean(person.x_handle).toLowerCase()] ?? 0}
+                />
+              ))}
+            </div>
+          )}
         </div>
       </div>
-
-      {sorted.length === 0 ? (
-        <p className="text-center text-sm text-neutral-400 py-8">No results found</p>
-      ) : (
-        <div className="flex flex-wrap justify-center gap-3">
-          {sorted.map((person) => (
-            <AvatarCard
-              key={`${person.id}-${person.x_handle}`}
-              person={person}
-              side={side}
-              onClick={() => setSelectedPerson(person)}
-              emailCount={clickCounts[getHandleClean(person.x_handle).toLowerCase()] ?? 0}
-            />
-          ))}
-        </div>
-      )}
 
       {selectedPerson && (
         <PersonModal
@@ -676,6 +768,8 @@ export default function SocialMediaRadar() {
   const { user, role, logout } = useAuth()
   const [democrats, setDemocrats] = useState<Person[]>([])
   const [republicans, setRepublicans] = useState<Person[]>([])
+  const [campaigns, setCampaigns] = useState<EmailCampaign[]>([])
+  const [petitions, setPetitions] = useState<Petition[]>([])
   const [search, setSearch] = useState("")
   const [loading, setLoading] = useState(true)
   const [clickCounts, setClickCounts] = useState<Record<string, number>>({})
@@ -688,7 +782,7 @@ export default function SocialMediaRadar() {
         setClickCounts(data)
       }
     } catch {
-      // silently fail — counts will be empty, default sorting applies
+      // silently fail
     }
   }, [])
 
@@ -704,6 +798,8 @@ export default function SocialMediaRadar() {
       .catch((err) => console.error("Failed to load data:", err))
       .finally(() => setLoading(false))
 
+    getCampaigns().then((d) => setCampaigns(d.campaigns)).catch(() => {})
+    getPetitions().then((d) => setPetitions(d.petitions)).catch(() => {})
     fetchClickCounts()
   }, [fetchClickCounts])
 
@@ -742,12 +838,6 @@ export default function SocialMediaRadar() {
               placeholder="Search by name, role, or handle..."
               className="flex-1 sm:w-60 rounded-full border border-neutral-200 bg-neutral-50 px-4 py-2 text-sm text-neutral-800 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-[#2dd4a8]/50 focus:border-[#2dd4a8]"
             />
-            <Link href="/campaigns" className="shrink-0 rounded-lg border border-neutral-200 px-3 py-2 text-xs font-medium text-neutral-600 hover:bg-neutral-50">
-              Campaigns
-            </Link>
-            <Link href="/petitions" className="shrink-0 rounded-lg border border-neutral-200 px-3 py-2 text-xs font-medium text-neutral-600 hover:bg-neutral-50">
-              Petitions
-            </Link>
             {user ? (
               <>
                 {(role === "admin" || role === "cohost") && (
@@ -768,14 +858,16 @@ export default function SocialMediaRadar() {
         </div>
       </header>
 
+      {/* Stories bar — Campaigns & Petitions like Instagram stories */}
+      <StoriesBar campaigns={campaigns} petitions={petitions} />
+
       {loading ? (
         <div className="flex items-center justify-center py-32">
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-neutral-200 border-t-[#2dd4a8]" />
         </div>
       ) : (
-        <>
-          {/* Desktop layout (>= 900px) */}
-          <div className="hidden min-[900px]:flex mx-auto max-w-[1400px]">
+        <div className="mx-auto max-w-[1400px] px-4 py-6 grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+          <div className="order-2 md:order-1">
             <PersonColumn
               title="GLOBAL PROGRESSIVE FIGURES"
               persons={democrats}
@@ -783,16 +875,11 @@ export default function SocialMediaRadar() {
               search={search}
               clickCounts={clickCounts}
               onEmailSent={handleEmailSent}
+              defaultOpen={false}
             />
+          </div>
 
-            {/* Vertical separator */}
-            <div className="relative flex items-center shrink-0">
-              <div className="h-full w-px bg-gradient-to-b from-[#e74c5e] via-neutral-300 to-[#2dd4a8]" />
-              <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 -rotate-90 whitespace-nowrap rounded-full bg-white px-4 py-2 text-[10px] font-semibold uppercase tracking-widest text-neutral-400 shadow-sm border border-neutral-100">
-                Global Influence Separator
-              </div>
-            </div>
-
+          <div className="order-1 md:order-2">
             <PersonColumn
               title="IRAN LIBERATION ADVOCATES"
               persons={republicans}
@@ -800,33 +887,10 @@ export default function SocialMediaRadar() {
               search={search}
               clickCounts={clickCounts}
               onEmailSent={handleEmailSent}
+              defaultOpen={false}
             />
           </div>
-
-          {/* Mobile layout (< 900px) — two columns side by side */}
-          <div className="min-[900px]:hidden relative">
-            <div className="grid grid-cols-2">
-              <PersonColumn
-                title="GLOBAL PROGRESSIVE FIGURES"
-                persons={democrats}
-                side="antiwar"
-                search={search}
-                clickCounts={clickCounts}
-                onEmailSent={handleEmailSent}
-              />
-              <PersonColumn
-                title="IRAN LIBERATION ADVOCATES"
-                persons={republicans}
-                side="prowar"
-                search={search}
-                clickCounts={clickCounts}
-                onEmailSent={handleEmailSent}
-              />
-            </div>
-            {/* Vertical separator overlay */}
-            <div className="pointer-events-none absolute inset-y-0 left-1/2 -translate-x-1/2 w-px bg-gradient-to-b from-[#e74c5e] via-neutral-300 to-[#2dd4a8]" />
-          </div>
-        </>
+        </div>
       )}
 
       {/* Footer */}
