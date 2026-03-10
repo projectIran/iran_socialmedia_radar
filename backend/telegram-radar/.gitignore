@@ -2,6 +2,7 @@
 .venv/
 __pycache__/
 seen_tweets.json
+seen_javid.json
 stats.json
 radar.log
 *.pyc
