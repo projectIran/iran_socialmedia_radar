@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import Link from "next/link"
 import { getCampaigns, getPetitions, getJavidCampaigns, getJavidPetitions, type EmailCampaign, type Petition, type JavidCampaign, type JavidPetition } from "@/lib/api"
 import emailData from "@/lib/emailData"
 
@@ -564,6 +563,121 @@ function AvatarCard({
 // ------------------------------------------------------------------
 // Stories Bar (Instagram-style for Campaigns & Petitions)
 // ------------------------------------------------------------------
+type StoryItem = {
+  id: string
+  title: string
+  description: string
+  link: string
+  type: "campaign" | "petition"
+  source: "internal" | "javid"
+  participation_count?: number
+  images?: string[]
+  email_to?: string
+  subject_base?: string
+  body_base?: string
+}
+
+function StoryOverlay({
+  item,
+  onClose,
+  onPrev,
+  onNext,
+  hasPrev,
+  hasNext,
+}: {
+  item: StoryItem
+  onClose: () => void
+  onPrev: () => void
+  onNext: () => void
+  hasPrev: boolean
+  hasNext: boolean
+}) {
+  const isCampaign = item.type === "campaign"
+  const bgGradient = isCampaign
+    ? "from-amber-500/90 via-orange-500/90 to-red-500/90"
+    : "from-rose-500/90 via-pink-500/90 to-purple-500/90"
+
+  const actionLabel = isCampaign ? "📧 ارسال ایمیل" : "✍️ امضای کارزار"
+
+  let actionHref = item.link
+  if (isCampaign && item.email_to) {
+    const subject = encodeURIComponent(item.subject_base || item.title)
+    const body = encodeURIComponent(item.body_base || "")
+    actionHref = `mailto:${item.email_to}?subject=${subject}&body=${body}`
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" />
+
+      {hasPrev && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onPrev() }}
+          className="absolute left-2 sm:left-6 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/20 text-white hover:bg-white/40 transition-colors"
+        >
+          <svg className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7" /></svg>
+        </button>
+      )}
+      {hasNext && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onNext() }}
+          className="absolute right-2 sm:right-6 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/20 text-white hover:bg-white/40 transition-colors"
+        >
+          <svg className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" /></svg>
+        </button>
+      )}
+
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="relative z-10 w-[90vw] max-w-md max-h-[85vh] overflow-y-auto rounded-2xl shadow-2xl"
+      >
+        <div className={`bg-gradient-to-br ${bgGradient} p-6 rounded-t-2xl`}>
+          <div className="flex items-center justify-between mb-4">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1 text-xs font-medium text-white">
+              {isCampaign ? "📧 Email Campaign" : "✍️ Petition"}
+              {item.source === "javid" && <span className="ml-1 opacity-75">• Javid Fighter</span>}
+            </span>
+            <button onClick={onClose} className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-white hover:bg-white/40 transition-colors">
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+          </div>
+          <h2 className="text-xl font-bold text-white leading-tight">{item.title}</h2>
+          {item.participation_count != null && item.participation_count > 0 && (
+            <p className="mt-2 text-sm text-white/80">👥 {item.participation_count.toLocaleString()} participants</p>
+          )}
+        </div>
+
+        <div className="bg-white p-6 rounded-b-2xl">
+          {item.images && item.images.length > 0 && (
+            <div className="mb-4 -mx-2">
+              {item.images.map((img, i) => (
+                <img key={i} src={img} alt="" className="w-full rounded-lg mb-2 last:mb-0" />
+              ))}
+            </div>
+          )}
+
+          <p className="text-sm text-neutral-600 leading-relaxed whitespace-pre-line">
+            {item.description || "No description available."}
+          </p>
+
+          <a
+            href={actionHref}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`mt-5 flex w-full items-center justify-center gap-2 rounded-xl px-5 py-3.5 text-sm font-bold text-white transition-transform hover:scale-[1.02] active:scale-[0.98] ${
+              isCampaign
+                ? "bg-gradient-to-r from-amber-500 to-orange-500"
+                : "bg-gradient-to-r from-rose-500 to-pink-500"
+            }`}
+          >
+            {actionLabel}
+          </a>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function StoriesBar({
   campaigns,
   petitions,
@@ -575,89 +689,104 @@ function StoriesBar({
   javidCampaigns: JavidCampaign[]
   javidPetitions: JavidPetition[]
 }) {
-  const categories = [
-    {
-      key: "javid-campaigns",
-      label: "Javid Fighter",
-      sublabel: "کمپین‌های ایمیلی",
-      href: "/campaigns/javid",
-      count: javidCampaigns.length,
-      from: "#f59e0b",
-      to: "#d97706",
-      icon: "M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z",
-      emoji: "🦁",
-    },
-    {
-      key: "javid-petitions",
-      label: "Javid Fighter",
-      sublabel: "کارزارها",
-      href: "/petitions/javid",
-      count: javidPetitions.length,
-      from: "#f59e0b",
-      to: "#d97706",
-      icon: "M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z",
-      emoji: "🦁",
-    },
-    {
-      key: "internal-campaigns",
-      label: "Email Campaigns",
-      sublabel: "کمپین‌های داخلی",
-      href: "/campaigns",
-      count: campaigns.length,
-      from: "#2dd4a8",
-      to: "#1aab88",
-      icon: "M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z",
-      emoji: "📧",
-    },
-    {
-      key: "internal-petitions",
-      label: "Petitions",
-      sublabel: "کارزارهای داخلی",
-      href: "/petitions",
-      count: petitions.length,
-      from: "#e74c5e",
-      to: "#c93a4b",
-      icon: "M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z",
-      emoji: "✍️",
-    },
-  ].filter((c) => c.count > 0)
+  const [activeIndex, setActiveIndex] = useState<number | null>(null)
 
-  if (categories.length === 0) return null
+  const stories: StoryItem[] = [
+    ...javidCampaigns.map((c, i) => ({
+      id: `jc-${i}`,
+      title: c.title,
+      description: c.description,
+      link: c.link,
+      type: "campaign" as const,
+      source: "javid" as const,
+      participation_count: c.participation_count,
+      images: c.images,
+    })),
+    ...javidPetitions.map((p, i) => ({
+      id: `jp-${i}`,
+      title: p.title,
+      description: p.description,
+      link: p.link,
+      type: "petition" as const,
+      source: "javid" as const,
+      participation_count: p.participation_count,
+      images: p.images,
+    })),
+    ...campaigns.map((c) => ({
+      id: `ic-${c.id}`,
+      title: c.title,
+      description: c.description,
+      link: c.link,
+      type: "campaign" as const,
+      source: "internal" as const,
+      email_to: c.email_to,
+      subject_base: c.subject_base,
+      body_base: c.body_base,
+    })),
+    ...petitions.map((p) => ({
+      id: `ip-${p.id}`,
+      title: p.title,
+      description: p.description,
+      link: p.link,
+      type: "petition" as const,
+      source: "internal" as const,
+    })),
+  ]
+
+  if (stories.length === 0) return null
+
+  const gradients: Record<string, [string, string]> = {
+    "campaign-javid": ["#f59e0b", "#ea580c"],
+    "petition-javid": ["#f59e0b", "#d97706"],
+    "campaign-internal": ["#2dd4a8", "#1aab88"],
+    "petition-internal": ["#e74c5e", "#c93a4b"],
+  }
 
   return (
-    <div className="w-full overflow-x-auto px-4 py-4 border-b border-neutral-200/60 bg-white/50">
-      <div className="mx-auto max-w-[1400px]">
-        <div className="flex gap-6 justify-center">
-          {categories.map((cat) => (
-            <Link
-              key={cat.key}
-              href={cat.href}
-              className="flex flex-col items-center gap-1.5 group"
-            >
-              <div
-                className="flex h-[72px] w-[72px] items-center justify-center rounded-full p-[3px]"
-                style={{ background: `linear-gradient(135deg, ${cat.from}, ${cat.to})` }}
-              >
-                <div className="flex h-full w-full items-center justify-center rounded-full bg-white group-hover:bg-neutral-50 transition-colors">
-                  <span className="text-2xl">{cat.emoji}</span>
-                </div>
-              </div>
-              <div className="text-center">
-                <span className="block text-[11px] font-semibold text-neutral-700 leading-tight">
-                  {cat.label}
-                </span>
-                <span className="block text-[10px] text-neutral-400 leading-tight">
-                  {cat.sublabel}
-                </span>
-                <span className="block text-[10px] font-bold mt-0.5" style={{ color: cat.from }}>
-                  {cat.count} items
-                </span>
-              </div>
-            </Link>
-          ))}
+    <>
+      <div className="w-full overflow-x-auto px-4 py-4 border-b border-neutral-200/60 bg-white/50">
+        <div className="mx-auto max-w-[1400px]">
+          <div className="flex gap-4 pb-1" style={{ minWidth: "min-content" }}>
+            {stories.map((story, idx) => {
+              const key = `${story.type}-${story.source}`
+              const [from, to] = gradients[key] || ["#888", "#666"]
+              const emoji = story.type === "campaign" ? "📧" : "✍️"
+              const truncTitle = story.title.length > 12 ? story.title.slice(0, 11) + "…" : story.title
+              return (
+                <button
+                  key={story.id}
+                  onClick={() => setActiveIndex(idx)}
+                  className="flex flex-col items-center gap-1.5 group flex-shrink-0"
+                >
+                  <div
+                    className="flex h-[68px] w-[68px] items-center justify-center rounded-full p-[3px]"
+                    style={{ background: `linear-gradient(135deg, ${from}, ${to})` }}
+                  >
+                    <div className="flex h-full w-full items-center justify-center rounded-full bg-white group-hover:bg-neutral-50 transition-colors">
+                      <span className="text-xl">{emoji}</span>
+                    </div>
+                  </div>
+                  <span className="block w-[72px] text-center text-[10px] font-medium text-neutral-600 leading-tight truncate">
+                    {truncTitle}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
         </div>
       </div>
-    </div>
+
+      {activeIndex !== null && stories[activeIndex] && (
+        <StoryOverlay
+          item={stories[activeIndex]}
+          onClose={() => setActiveIndex(null)}
+          onPrev={() => setActiveIndex((p) => Math.max(0, (p ?? 0) - 1))}
+          onNext={() => setActiveIndex((p) => Math.min(stories.length - 1, (p ?? 0) + 1))}
+          hasPrev={activeIndex > 0}
+          hasNext={activeIndex < stories.length - 1}
+        />
+      )}
+    </>
   )
 }
 
