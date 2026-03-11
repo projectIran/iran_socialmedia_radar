@@ -39,7 +39,7 @@ function getPhotoUrl(x_handle: string): string {
   return `/data/photos/${getHandleClean(x_handle).toLowerCase()}.jpg`
 }
 
-const EMAIL_THRESHOLD = 2
+const EMAIL_THRESHOLD = Number(process.env.NEXT_PUBLIC_EMAIL_THRESHOLD) || 100
 
 function getInfluenceScore(person: Person): number {
   const base = person.priority === "high" ? 9.0 : person.priority === "medium" ? 7.5 : 5.0
