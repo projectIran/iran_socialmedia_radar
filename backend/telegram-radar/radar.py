@@ -280,8 +280,8 @@ def format_telegram_message(tweet: dict) -> str:
     )
 
 
-def send_to_telegram(message: str, dry_run: bool = False) -> bool:
-    """Send formatted message to Telegram."""
+def send_to_telegram(message: str, dry_run: bool = False, reply_markup: dict | None = None) -> bool:
+    """Send formatted message to Telegram with optional inline keyboard."""
     if dry_run:
         logger.info(f"[DRY RUN] Would send to Telegram:\n{message}\n")
         return True
@@ -293,6 +293,8 @@ def send_to_telegram(message: str, dry_run: bool = False) -> bool:
         "parse_mode": "HTML",
         "disable_web_page_preview": False,
     }
+    if reply_markup:
+        payload["reply_markup"] = reply_markup
 
     try:
         resp = requests.post(url, json=payload, timeout=30)
@@ -411,7 +413,7 @@ def format_javid_petition(item: dict) -> str:
     return _truncate_for_caption(header + desc + footer, has_images)
 
 
-def send_photo_to_telegram(photo_url: str, caption: str, dry_run: bool = False) -> bool:
+def send_photo_to_telegram(photo_url: str, caption: str, dry_run: bool = False, reply_markup: dict | None = None) -> bool:
     if dry_run:
         logger.info(f"[DRY RUN] Would send photo to Telegram:\n{caption[:100]}...\n")
         return True
@@ -423,6 +425,8 @@ def send_photo_to_telegram(photo_url: str, caption: str, dry_run: bool = False) 
         "caption": caption,
         "parse_mode": "HTML",
     }
+    if reply_markup:
+        payload["reply_markup"] = reply_markup
     try:
         resp = requests.post(url, json=payload, timeout=30)
         if resp.status_code == 200:
@@ -434,17 +438,19 @@ def send_photo_to_telegram(photo_url: str, caption: str, dry_run: bool = False) 
         return False
 
 
-def send_media_group_to_telegram(photos: list[str], caption: str, dry_run: bool = False) -> bool:
-    """Send multiple photos as album with caption on first photo."""
+def send_media_group_to_telegram(photos: list[str], caption: str, dry_run: bool = False, reply_markup: dict | None = None) -> bool:
+    """Send multiple photos as album with caption on first photo.
+    sendMediaGroup doesn't support reply_markup, so for albums we send
+    a follow-up text message with the inline keyboard buttons."""
     if dry_run:
         logger.info(f"[DRY RUN] Would send {len(photos)} photos to Telegram\n")
         return True
 
     if not photos:
-        return send_to_telegram(caption, dry_run)
+        return send_to_telegram(caption, dry_run, reply_markup)
 
     if len(photos) == 1:
-        return send_photo_to_telegram(photos[0], caption, dry_run)
+        return send_photo_to_telegram(photos[0], caption, dry_run, reply_markup)
 
     media = []
     for i, url in enumerate(photos[:10]):
@@ -459,9 +465,12 @@ def send_media_group_to_telegram(photos: list[str], caption: str, dry_run: bool 
     try:
         resp = requests.post(url, json=payload, timeout=30)
         if resp.status_code == 200:
+            if reply_markup:
+                time.sleep(1)
+                send_to_telegram("👇", dry_run=False, reply_markup=reply_markup)
             return True
         logger.error(f"Telegram sendMediaGroup error {resp.status_code}: {resp.text}")
-        return send_photo_to_telegram(photos[0], caption, dry_run)
+        return send_photo_to_telegram(photos[0], caption, dry_run, reply_markup)
     except Exception as e:
         logger.error(f"Telegram sendMediaGroup failed: {e}")
         return False
@@ -485,10 +494,14 @@ def run_javid_cycle(dry_run: bool = False) -> int:
             continue
         caption = format_javid_campaign(item)
         images = item.get("images", [])
+        link = item.get("link", "")
+        keyboard = None
+        if link:
+            keyboard = {"inline_keyboard": [[{"text": "📧 شرکت در کمپین", "url": link}]]}
         if images:
-            ok = send_media_group_to_telegram(images, caption, dry_run)
+            ok = send_media_group_to_telegram(images, caption, dry_run, keyboard)
         else:
-            ok = send_to_telegram(caption, dry_run)
+            ok = send_to_telegram(caption, dry_run, keyboard)
         if ok:
             sent += 1
             seen.add(item_id)
@@ -500,10 +513,14 @@ def run_javid_cycle(dry_run: bool = False) -> int:
             continue
         caption = format_javid_petition(item)
         images = item.get("images", [])
+        link = item.get("link", "")
+        keyboard = None
+        if link:
+            keyboard = {"inline_keyboard": [[{"text": "✍️ امضای کارزار", "url": link}]]}
         if images:
-            ok = send_media_group_to_telegram(images, caption, dry_run)
+            ok = send_media_group_to_telegram(images, caption, dry_run, keyboard)
         else:
-            ok = send_to_telegram(caption, dry_run)
+            ok = send_to_telegram(caption, dry_run, keyboard)
         if ok:
             sent += 1
             seen.add(item_id)
@@ -531,7 +548,8 @@ def run_cycle(query: str, dry_run: bool = False) -> tuple[int, int]:
 
     for tweet in tweets:
         msg = format_telegram_message(tweet)
-        if send_to_telegram(msg, dry_run):
+        keyboard = {"inline_keyboard": [[{"text": "🔗 مشاهده در X", "url": tweet["url"]}]]}
+        if send_to_telegram(msg, dry_run, keyboard):
             sent_count += 1
             time.sleep(1.5)
         seen[tweet["id"]] = now
