@@ -1,116 +1,116 @@
-# Telegram Radar - رادار تلگرامی
+# Telegram Radar
 
-بات مانیتورینگ که:
-1. پست‌های ترند X (توییتر) درباره ایران رو پیدا و به تلگرام ارسال می‌کنه
-2. کمپین‌ها و پتیشن‌های **Javid Fighter** رو به کانال تلگرام پست می‌کنه (با عکس و دکمه inline)
+Monitoring bot that:
+1. Finds trending X (Twitter) posts about Iran and forwards them to Telegram
+2. Posts **Javid Fighter** campaigns & petitions to a Telegram channel (with images and inline buttons)
 
-هر کدوم از این دو منبع مستقل کار می‌کنه — می‌تونی فقط Javid Fighter یا فقط X یا هر دو رو فعال کنی.
+Each data source works independently — you can enable Javid Fighter only, X only, or both.
 
-## نصب
+## Installation
 
 ```bash
 cd backend/telegram-radar
 python -m venv .venv
-source .venv/bin/activate   # مک/لینوکس
+source .venv/bin/activate   # macOS/Linux
 pip install -r requirements.txt
 ```
 
-## کانفیگ
+## Configuration
 
-دو فایل env داریم:
+Two env files for separate environments:
 
-| فایل | کاربرد | توضیح |
-|------|--------|-------|
-| `.env` | **پروداکشن (سرور)** | بات اصلی `@Iran_trend_X_post_Radar_bot` → کانال `@iran_post_x_trend` |
-| `.env.local` | **لوکال (توسعه)** | بات تست جداگانه → کانال/گروه تست |
+| File | Environment | Description |
+|------|-------------|-------------|
+| `.env` | **Production (server)** | Main bot `@Iran_trend_X_post_Radar_bot` → channel `@iran_post_x_trend` |
+| `.env.local` | **Local (development)** | Separate test bot → test channel/group |
 
-### راه‌اندازی لوکال (اولین بار)
+### Local Setup (first time)
 
-1. توی تلگرام به `@BotFather` پیام بده
-2. `/newbot` بزن و یک بات **تست** بساز (مثلا `MyRadarTestBot`)
-3. توکنش رو کپی کن
-4. یک کانال یا گروه تست بساز و بات رو ادمینش کن
-5. فایل `.env.local` رو پر کن:
+1. Message `@BotFather` on Telegram
+2. Run `/newbot` and create a **test** bot (e.g. `MyRadarTestBot`)
+3. Copy the bot token
+4. Create a test channel or group and make the bot an admin
+5. Fill in `.env.local`:
 
 ```env
-TELEGRAM_BOT_TOKEN=توکن_بات_تست
-TELEGRAM_CHAT_ID=@اسم_کانال_تست
+TELEGRAM_BOT_TOKEN=your_test_bot_token
+TELEGRAM_CHAT_ID=@your_test_channel
 ```
 
-6. اجرا:
+6. Run:
 
 ```bash
 python radar.py --env .env.local --once
 ```
 
-### راه‌اندازی سرور (پروداکشن)
+### Server Setup (production)
 
-فایل `.env` از قبل تنظیم شده:
+`.env` is pre-configured:
 
 ```env
-TELEGRAM_BOT_TOKEN=توکن_بات_اصلی
+TELEGRAM_BOT_TOKEN=production_bot_token
 TELEGRAM_CHAT_ID=@iran_post_x_trend
 ```
 
-### متغیرهای محیطی
+### Environment Variables
 
-| متغیر | اجباری | پیش‌فرض | توضیح |
-|-------|--------|---------|-------|
-| `TELEGRAM_BOT_TOKEN` | بله | — | توکن بات تلگرام از `@BotFather` |
-| `TELEGRAM_CHAT_ID` | بله | — | آیدی کانال (`@name`) یا گروه (`-123456`) |
-| `JAVID_API_URL` | خیر | `https://api.javidfighter.com` | آدرس API جاوید فایتر |
-| `JAVID_API_KEY` | خیر | — | کلید API جاوید فایتر |
-| `JAVID_CHECK_INTERVAL_MINUTES` | خیر | `15` | فاصله چک کمپین‌ها (دقیقه) |
-| `X_BEARER_TOKEN` | خیر | — | توکن X API (فقط read) |
-| `SEARCH_INTERVAL_MINUTES` | خیر | `60` | فاصله جستجوی X (دقیقه) |
-| `MIN_LIKES` | خیر | `100` | حداقل لایک برای فیلتر |
-| `MIN_RETWEETS` | خیر | `20` | حداقل ریتوییت برای فیلتر |
-| `MAX_RESULTS` | خیر | `10` | تعداد نتایج هر جستجو |
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `TELEGRAM_BOT_TOKEN` | Yes | — | Telegram bot token from `@BotFather` |
+| `TELEGRAM_CHAT_ID` | Yes | — | Channel (`@name`) or group (`-123456`) ID |
+| `JAVID_API_URL` | No | `https://api.javidfighter.com` | Javid Fighter API base URL |
+| `JAVID_API_KEY` | No | — | Javid Fighter API key |
+| `JAVID_CHECK_INTERVAL_MINUTES` | No | `15` | Interval to check for new campaigns (minutes) |
+| `X_BEARER_TOKEN` | No | — | X API bearer token (read-only) |
+| `SEARCH_INTERVAL_MINUTES` | No | `60` | X search interval (minutes) |
+| `MIN_LIKES` | No | `100` | Minimum likes to filter trending posts |
+| `MIN_RETWEETS` | No | `20` | Minimum retweets to filter trending posts |
+| `MAX_RESULTS` | No | `10` | Results per search query |
 
-## اجرا
+## Usage
 
 ```bash
-# لوکال — بات تست
-python radar.py --env .env.local --once          # یکبار تست
-python radar.py --env .env.local --once --dry-run # بدون ارسال
-python radar.py --env .env.local                  # مداوم
+# Local — test bot
+python radar.py --env .env.local --once          # run once
+python radar.py --env .env.local --once --dry-run # dry run (no sending)
+python radar.py --env .env.local                  # continuous
 
-# سرور — بات اصلی (پروداکشن)
-python radar.py --once           # یکبار
-python radar.py                  # مداوم (۲۴/۷)
-python radar.py --once --dry-run # تست بدون ارسال
+# Server — production bot
+python radar.py --once           # run once
+python radar.py                  # continuous (24/7)
+python radar.py --once --dry-run # dry run
 ```
 
-## اجرا روی سرور (۲۴/۷)
+## Running on a Server (24/7)
 
 ```bash
-# با nohup
+# With nohup
 nohup python radar.py > /dev/null 2>&1 &
 
-# یا با screen
+# With screen
 screen -S radar
 python radar.py
-# Ctrl+A, D برای detach
+# Ctrl+A, D to detach
 
-# یا با systemd service
+# Or use a systemd service
 ```
 
-## ویژگی‌ها
+## Features
 
-- **دکمه‌های Inline**: هر پست دکمه مستقیم داره (📧 شرکت در کمپین / ✍️ امضای کارزار / 🔗 مشاهده در X)
-- **ارسال عکس**: کمپین‌ها و پتیشن‌ها با عکس ارسال میشن (تک عکس یا آلبوم)
-- **جلوگیری از تکرار**: آیتم‌های قبلاً ارسال شده دوباره فرستاده نمیشن
-- **دو منبع مستقل**: X و Javid Fighter جداگانه کار می‌کنن
+- **Inline Keyboard Buttons**: Each post has a direct action button (📧 Join Campaign / ✍️ Sign Petition / 🔗 View on X)
+- **Photo Support**: Campaigns and petitions are sent with images (single photo or album)
+- **Duplicate Prevention**: Previously sent items are tracked and won't be resent
+- **Independent Sources**: X and Javid Fighter operate independently
 
-## فایل‌ها
+## Files
 
-| فایل | توضیح |
-|------|-------|
-| `radar.py` | اسکریپت اصلی |
-| `.env` | تنظیمات پروداکشن (خصوصی — git ignore) |
-| `.env.local` | تنظیمات لوکال/تست (خصوصی — git ignore) |
-| `.env.example` | نمونه تنظیمات (عمومی) |
-| `seen_tweets.json` | کش توییت‌های X دیده شده (خودکار) |
-| `seen_javid.json` | کش آیتم‌های Javid Fighter ارسال شده (خودکار) |
-| `stats.json` | آمار ارسال‌ها (خودکار) |
-| `radar.log` | لاگ فعالیت‌ها |
+| File | Description |
+|------|-------------|
+| `radar.py` | Main script |
+| `.env` | Production config (private — git ignored) |
+| `.env.local` | Local/test config (private — git ignored) |
+| `.env.example` | Example config (public) |
+| `seen_tweets.json` | Cache of sent X tweet IDs (auto-generated) |
+| `seen_javid.json` | Cache of sent Javid Fighter items (auto-generated) |
+| `stats.json` | Send statistics (auto-generated) |
+| `radar.log` | Activity log |
