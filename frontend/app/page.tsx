@@ -2,8 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react"
 import Link from "next/link"
-import { useAuth } from "@/lib/auth-context"
-import { getCampaigns, getPetitions, type EmailCampaign, type Petition } from "@/lib/api"
+import { getCampaigns, getPetitions, getJavidCampaigns, getJavidPetitions, type EmailCampaign, type Petition, type JavidCampaign, type JavidPetition } from "@/lib/api"
 import emailData from "@/lib/emailData"
 
 interface Person {
@@ -568,51 +567,94 @@ function AvatarCard({
 function StoriesBar({
   campaigns,
   petitions,
+  javidCampaigns,
+  javidPetitions,
 }: {
   campaigns: EmailCampaign[]
   petitions: Petition[]
+  javidCampaigns: JavidCampaign[]
+  javidPetitions: JavidPetition[]
 }) {
-  const items = [
-    ...campaigns.map((c) => ({ type: "campaign" as const, id: c.id, title: c.title, code: c.direct_link_code, active: c.is_active })),
-    ...petitions.map((p) => ({ type: "petition" as const, id: p.id, title: p.title, code: p.direct_link_code, active: p.is_active })),
-  ]
+  const categories = [
+    {
+      key: "javid-campaigns",
+      label: "Javid Fighter",
+      sublabel: "کمپین‌های ایمیلی",
+      href: "/campaigns/javid",
+      count: javidCampaigns.length,
+      from: "#f59e0b",
+      to: "#d97706",
+      icon: "M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z",
+      emoji: "🦁",
+    },
+    {
+      key: "javid-petitions",
+      label: "Javid Fighter",
+      sublabel: "کارزارها",
+      href: "/petitions/javid",
+      count: javidPetitions.length,
+      from: "#f59e0b",
+      to: "#d97706",
+      icon: "M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z",
+      emoji: "🦁",
+    },
+    {
+      key: "internal-campaigns",
+      label: "Email Campaigns",
+      sublabel: "کمپین‌های داخلی",
+      href: "/campaigns",
+      count: campaigns.length,
+      from: "#2dd4a8",
+      to: "#1aab88",
+      icon: "M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z",
+      emoji: "📧",
+    },
+    {
+      key: "internal-petitions",
+      label: "Petitions",
+      sublabel: "کارزارهای داخلی",
+      href: "/petitions",
+      count: petitions.length,
+      from: "#e74c5e",
+      to: "#c93a4b",
+      icon: "M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z",
+      emoji: "✍️",
+    },
+  ].filter((c) => c.count > 0)
 
-  if (items.length === 0) return null
+  if (categories.length === 0) return null
 
   return (
     <div className="w-full overflow-x-auto px-4 py-4 border-b border-neutral-200/60 bg-white/50">
       <div className="mx-auto max-w-[1400px]">
-        <div className="flex gap-4 min-w-max">
-          {items.map((item) => {
-            const isCampaign = item.type === "campaign"
-            const gradFrom = isCampaign ? "#2dd4a8" : "#e74c5e"
-            const gradTo = isCampaign ? "#1aab88" : "#c93a4b"
-            const icon = isCampaign
-              ? "M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-              : "M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-
-            return (
-              <Link
-                key={item.id}
-                href={isCampaign ? `/campaigns/${item.code}` : `/petitions/${item.code}`}
-                className="flex flex-col items-center gap-1.5 group"
+        <div className="flex gap-6 justify-center">
+          {categories.map((cat) => (
+            <Link
+              key={cat.key}
+              href={cat.href}
+              className="flex flex-col items-center gap-1.5 group"
+            >
+              <div
+                className="flex h-[72px] w-[72px] items-center justify-center rounded-full p-[3px]"
+                style={{ background: `linear-gradient(135deg, ${cat.from}, ${cat.to})` }}
               >
-                <div
-                  className="flex h-16 w-16 items-center justify-center rounded-full p-[3px]"
-                  style={{ background: `linear-gradient(135deg, ${gradFrom}, ${gradTo})` }}
-                >
-                  <div className="flex h-full w-full items-center justify-center rounded-full bg-white group-hover:bg-neutral-50 transition-colors">
-                    <svg className="h-5 w-5" style={{ color: gradFrom }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                      <path d={icon} />
-                    </svg>
-                  </div>
+                <div className="flex h-full w-full items-center justify-center rounded-full bg-white group-hover:bg-neutral-50 transition-colors">
+                  <span className="text-2xl">{cat.emoji}</span>
                 </div>
-                <span className="max-w-[72px] text-center text-[10px] font-medium leading-tight text-neutral-600 line-clamp-2">
-                  {item.title}
+              </div>
+              <div className="text-center">
+                <span className="block text-[11px] font-semibold text-neutral-700 leading-tight">
+                  {cat.label}
                 </span>
-              </Link>
-            )
-          })}
+                <span className="block text-[10px] text-neutral-400 leading-tight">
+                  {cat.sublabel}
+                </span>
+                <span className="block text-[10px] font-bold mt-0.5" style={{ color: cat.from }}>
+                  {cat.count} items
+                </span>
+              </div>
+            </Link>
+          ))}
         </div>
       </div>
     </div>
@@ -765,11 +807,12 @@ function PersonColumn({
 // Main Page
 // ------------------------------------------------------------------
 export default function SocialMediaRadar() {
-  const { user, role, logout } = useAuth()
   const [democrats, setDemocrats] = useState<Person[]>([])
   const [republicans, setRepublicans] = useState<Person[]>([])
   const [campaigns, setCampaigns] = useState<EmailCampaign[]>([])
   const [petitions, setPetitions] = useState<Petition[]>([])
+  const [javidCampaigns, setJavidCampaigns] = useState<JavidCampaign[]>([])
+  const [javidPetitions, setJavidPetitions] = useState<JavidPetition[]>([])
   const [search, setSearch] = useState("")
   const [loading, setLoading] = useState(true)
   const [clickCounts, setClickCounts] = useState<Record<string, number>>({})
@@ -800,6 +843,8 @@ export default function SocialMediaRadar() {
 
     getCampaigns().then((d) => setCampaigns(d.campaigns)).catch(() => {})
     getPetitions().then((d) => setPetitions(d.petitions)).catch(() => {})
+    getJavidCampaigns().then(setJavidCampaigns).catch(() => {})
+    getJavidPetitions().then(setJavidPetitions).catch(() => {})
     fetchClickCounts()
   }, [fetchClickCounts])
 
@@ -838,28 +883,12 @@ export default function SocialMediaRadar() {
               placeholder="Search by name, role, or handle..."
               className="flex-1 sm:w-60 rounded-full border border-neutral-200 bg-neutral-50 px-4 py-2 text-sm text-neutral-800 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-[#2dd4a8]/50 focus:border-[#2dd4a8]"
             />
-            {user ? (
-              <>
-                {(role === "admin" || role === "cohost") && (
-                  <Link href="/admin" className="shrink-0 rounded-lg bg-neutral-800 px-3 py-2 text-xs font-semibold text-white hover:bg-neutral-700">
-                    Admin
-                  </Link>
-                )}
-                <button onClick={logout} className="shrink-0 rounded-lg bg-neutral-100 px-3 py-2 text-xs font-medium text-neutral-600 hover:bg-neutral-200">
-                  Logout
-                </button>
-              </>
-            ) : (
-              <Link href="/login" className="shrink-0 rounded-lg bg-gradient-to-r from-[#2dd4a8] to-[#1aab88] px-3 py-2 text-xs font-semibold text-white hover:opacity-90">
-                Sign In
-              </Link>
-            )}
           </div>
         </div>
       </header>
 
       {/* Stories bar — Campaigns & Petitions like Instagram stories */}
-      <StoriesBar campaigns={campaigns} petitions={petitions} />
+      <StoriesBar campaigns={campaigns} petitions={petitions} javidCampaigns={javidCampaigns} javidPetitions={javidPetitions} />
 
       {loading ? (
         <div className="flex items-center justify-center py-32">
@@ -875,7 +904,7 @@ export default function SocialMediaRadar() {
               search={search}
               clickCounts={clickCounts}
               onEmailSent={handleEmailSent}
-              defaultOpen={false}
+              defaultOpen={true}
             />
           </div>
 
@@ -887,7 +916,7 @@ export default function SocialMediaRadar() {
               search={search}
               clickCounts={clickCounts}
               onEmailSent={handleEmailSent}
-              defaultOpen={false}
+              defaultOpen={true}
             />
           </div>
         </div>

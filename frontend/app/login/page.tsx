@@ -20,7 +20,7 @@ export default function LoginPage() {
     setLoading(true)
     try {
       await login(email, password)
-      router.push("/campaigns")
+      router.push("/admin")
     } catch (err) {
       if (err instanceof ApiRequestError) {
         const details = err.details as Array<{ msg: string }> | undefined

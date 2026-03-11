@@ -152,6 +152,46 @@ export function participatePetition(idOrCode: string) {
   )
 }
 
+// ── Javid Fighter (external API, proxied through /api/javid/*) ──
+
+export interface JavidCampaign {
+  title: string
+  description: string
+  link: string
+  participation_count: number
+  images: string[]
+}
+
+export interface JavidPetition {
+  title: string
+  description: string
+  link: string
+  participation_count: number
+  images: string[]
+}
+
+export async function getJavidCampaigns(): Promise<JavidCampaign[]> {
+  try {
+    const res = await fetch("/api/javid/campaigns")
+    if (!res.ok) return []
+    const data = await res.json()
+    return data.items || []
+  } catch {
+    return []
+  }
+}
+
+export async function getJavidPetitions(): Promise<JavidPetition[]> {
+  try {
+    const res = await fetch("/api/javid/petitions")
+    if (!res.ok) return []
+    const data = await res.json()
+    return data.items || []
+  } catch {
+    return []
+  }
+}
+
 // ── Admin: Email Campaigns ──
 
 export interface AdminEmailCampaign extends EmailCampaign {
