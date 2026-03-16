@@ -39,3 +39,6 @@ backend/telegram-radar/radar.log
 # Build / deploy
 .netlify
 dist/
+
+# Local dev data
+.data/

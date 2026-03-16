@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
+import { getCampaigns, getPetitions, getJavidCampaigns, getJavidPetitions, type EmailCampaign, type Petition, type JavidCampaign, type JavidPetition } from "@/lib/api"
 import emailData from "@/lib/emailData"
 
 interface Person {
@@ -37,20 +38,50 @@ function getPhotoUrl(x_handle: string): string {
   return `/data/photos/${getHandleClean(x_handle).toLowerCase()}.jpg`
 }
 
+const EMAIL_THRESHOLD = Number(process.env.NEXT_PUBLIC_EMAIL_THRESHOLD) || 100
+
 function getInfluenceScore(person: Person): number {
   const base = person.priority === "high" ? 9.0 : person.priority === "medium" ? 7.5 : 5.0
   const frac = (person.name.length * 0.1) % 1
   return Math.round((base + frac) * 10) / 10
 }
 
-function sortPersons(persons: Person[]): Person[] {
+function sortPersons(
+  persons: Person[],
+  clickCounts: Record<string, number>
+): Person[] {
   return [...persons].sort((a, b) => {
+    const countA = clickCounts[getHandleClean(a.x_handle).toLowerCase()] ?? 0
+    const countB = clickCounts[getHandleClean(b.x_handle).toLowerCase()] ?? 0
+    const overA = countA >= EMAIL_THRESHOLD ? 1 : 0
+    const overB = countB >= EMAIL_THRESHOLD ? 1 : 0
+
+    if (overA !== overB) return overA - overB
+
+    if (!overA) {
+      if (countA !== countB) return countA - countB
+    } else {
+      if (countA !== countB) return countA - countB
+    }
+
     const prioOrder = { high: 0, medium: 1, low: 2 }
     if (prioOrder[a.priority] !== prioOrder[b.priority]) {
       return prioOrder[a.priority] - prioOrder[b.priority]
     }
     return a.name.localeCompare(b.name)
   })
+}
+
+async function trackEmailClick(handle: string): Promise<void> {
+  try {
+    await fetch("/api/email-clicks", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ handle }),
+    })
+  } catch {
+    // silently fail
+  }
 }
 
 function generateEmailClientSide(
@@ -156,10 +187,12 @@ function EmailTemplateModal({
   person,
   side,
   onClose,
+  onEmailSent,
 }: {
   person: Person
   side: Side
   onClose: () => void
+  onEmailSent?: () => void
 }) {
   const [userName, setUserName] = useState("")
   const [userCity, setUserCity] = useState("")
@@ -312,6 +345,10 @@ function EmailTemplateModal({
                 </button>
                 <a
                   href={`mailto:${person.email}?subject=${encodedSubject}&body=${encodedBody}`}
+                  onClick={() => {
+                    trackEmailClick(person.x_handle)
+                    onEmailSent?.()
+                  }}
                   className="rounded-xl px-2 py-2.5 text-xs font-medium text-white text-center transition-opacity hover:opacity-90"
                   style={{ backgroundColor: "#6b7280" }}
                 >
@@ -333,15 +370,21 @@ function PersonModal({
   person,
   side,
   onClose,
+  emailCount,
+  onEmailSent,
 }: {
   person: Person
   side: Side
   onClose: () => void
+  emailCount: number
+  onEmailSent: () => void
 }) {
   const [showEmail, setShowEmail] = useState(false)
   const accentColor = side === "antiwar" ? "#e74c5e" : "#2dd4a8"
   const lightBg = side === "antiwar" ? "#fdf0f0" : "#e6faf4"
   const handle = getHandleClean(person.x_handle)
+  const progress = Math.min((emailCount / EMAIL_THRESHOLD) * 100, 100)
+  const isOverThreshold = emailCount >= EMAIL_THRESHOLD
 
   return (
     <>
@@ -441,17 +484,39 @@ function PersonModal({
               </button>
             </div>
 
-            {/* Status */}
-            <p className="mt-4 flex items-center gap-2 text-xs text-neutral-400">
-              <span className="h-1.5 w-1.5 rounded-full bg-green-400 animate-pulse" />
-              Redirecting to external account...
-            </p>
+            {/* Email count progress */}
+            <div className="mt-4 space-y-1.5">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-neutral-500">
+                  Emails sent: <span className="font-semibold text-neutral-700">{emailCount}</span> / {EMAIL_THRESHOLD}
+                </span>
+                {isOverThreshold && (
+                  <span className="rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold text-green-700">
+                    Goal reached
+                  </span>
+                )}
+              </div>
+              <div className="h-1.5 w-full rounded-full bg-neutral-200 overflow-hidden">
+                <div
+                  className="h-full rounded-full transition-all duration-500"
+                  style={{
+                    width: `${progress}%`,
+                    backgroundColor: isOverThreshold ? "#22c55e" : accentColor,
+                  }}
+                />
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
       {showEmail && (
-        <EmailTemplateModal person={person} side={side} onClose={() => setShowEmail(false)} />
+        <EmailTemplateModal
+          person={person}
+          side={side}
+          onClose={() => setShowEmail(false)}
+          onEmailSent={onEmailSent}
+        />
       )}
     </>
   )
@@ -464,27 +529,29 @@ function AvatarCard({
   person,
   side,
   onClick,
+  emailCount,
 }: {
   person: Person
   side: Side
   onClick: () => void
+  emailCount: number
 }) {
   const accentColor = side === "antiwar" ? "#e74c5e" : "#2dd4a8"
+  const isOverThreshold = emailCount >= EMAIL_THRESHOLD
+  const opacity = isOverThreshold ? "opacity-50" : ""
 
   return (
     <button
       onClick={onClick}
-      className="group relative flex flex-col items-center focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 rounded-lg p-1 transition-transform hover:scale-105"
+      className={`group relative flex flex-col items-center focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 rounded-lg p-1 transition-transform hover:scale-105 ${opacity}`}
       style={{ width: 100 }}
     >
-      {person.priority === "high" && (
-        <span
-          className="absolute -top-1 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-full px-2 py-0.5 text-[9px] font-bold text-white"
-          style={{ backgroundColor: accentColor }}
-        >
-          Top Priority
-        </span>
-      )}
+      <span
+        className="absolute -top-1 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-full px-2 py-0.5 text-[9px] font-bold text-white"
+        style={{ backgroundColor: isOverThreshold ? "#22c55e" : accentColor }}
+      >
+        {isOverThreshold ? `✓ ${emailCount}` : `${emailCount} / ${EMAIL_THRESHOLD}`}
+      </span>
       <Avatar person={person} side={side} size={68} />
       <span className="mt-2 max-w-[90px] text-center text-[11px] font-medium leading-tight text-neutral-700 line-clamp-2">
         {person.name}
@@ -494,19 +561,256 @@ function AvatarCard({
 }
 
 // ------------------------------------------------------------------
-// Column
+// Stories Bar (Instagram-style for Campaigns & Petitions)
+// ------------------------------------------------------------------
+type StoryItem = {
+  id: string
+  title: string
+  description: string
+  link: string
+  type: "campaign" | "petition"
+  source: "internal" | "javid"
+  participation_count?: number
+  images?: string[]
+  email_to?: string
+  subject_base?: string
+  body_base?: string
+}
+
+function StoryOverlay({
+  item,
+  onClose,
+  onPrev,
+  onNext,
+  hasPrev,
+  hasNext,
+}: {
+  item: StoryItem
+  onClose: () => void
+  onPrev: () => void
+  onNext: () => void
+  hasPrev: boolean
+  hasNext: boolean
+}) {
+  const isCampaign = item.type === "campaign"
+  const bgGradient = isCampaign
+    ? "from-amber-500/90 via-orange-500/90 to-red-500/90"
+    : "from-rose-500/90 via-pink-500/90 to-purple-500/90"
+
+  const actionLabel = isCampaign ? "📧 ارسال ایمیل" : "✍️ امضای کارزار"
+
+  let actionHref = item.link
+  if (isCampaign && item.email_to) {
+    const subject = encodeURIComponent(item.subject_base || item.title)
+    const body = encodeURIComponent(item.body_base || "")
+    actionHref = `mailto:${item.email_to}?subject=${subject}&body=${body}`
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" />
+
+      {hasPrev && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onPrev() }}
+          className="absolute left-2 sm:left-6 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/20 text-white hover:bg-white/40 transition-colors"
+        >
+          <svg className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7" /></svg>
+        </button>
+      )}
+      {hasNext && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onNext() }}
+          className="absolute right-2 sm:right-6 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/20 text-white hover:bg-white/40 transition-colors"
+        >
+          <svg className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" /></svg>
+        </button>
+      )}
+
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="relative z-10 w-[90vw] max-w-md max-h-[85vh] overflow-y-auto rounded-2xl shadow-2xl"
+      >
+        <div className={`bg-gradient-to-br ${bgGradient} p-6 rounded-t-2xl`}>
+          <div className="flex items-center justify-between mb-4">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1 text-xs font-medium text-white">
+              {isCampaign ? "📧 Email Campaign" : "✍️ Petition"}
+              {item.source === "javid" && <span className="ml-1 opacity-75">• Javid Fighter</span>}
+            </span>
+            <button onClick={onClose} className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-white hover:bg-white/40 transition-colors">
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+          </div>
+          <h2 className="text-xl font-bold text-white leading-tight">{item.title}</h2>
+          {item.participation_count != null && item.participation_count > 0 && (
+            <p className="mt-2 text-sm text-white/80">👥 {item.participation_count.toLocaleString()} participants</p>
+          )}
+        </div>
+
+        <div className="bg-white p-6 rounded-b-2xl">
+          {item.images && item.images.length > 0 && (
+            <div className="mb-4 -mx-2">
+              {item.images.map((img, i) => (
+                <img key={i} src={img} alt="" className="w-full rounded-lg mb-2 last:mb-0" />
+              ))}
+            </div>
+          )}
+
+          <p className="text-sm text-neutral-600 leading-relaxed whitespace-pre-line">
+            {item.description || "No description available."}
+          </p>
+
+          <a
+            href={actionHref}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`mt-5 flex w-full items-center justify-center gap-2 rounded-xl px-5 py-3.5 text-sm font-bold text-white transition-transform hover:scale-[1.02] active:scale-[0.98] ${
+              isCampaign
+                ? "bg-gradient-to-r from-amber-500 to-orange-500"
+                : "bg-gradient-to-r from-rose-500 to-pink-500"
+            }`}
+          >
+            {actionLabel}
+          </a>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function StoriesBar({
+  campaigns,
+  petitions,
+  javidCampaigns,
+  javidPetitions,
+}: {
+  campaigns: EmailCampaign[]
+  petitions: Petition[]
+  javidCampaigns: JavidCampaign[]
+  javidPetitions: JavidPetition[]
+}) {
+  const [activeIndex, setActiveIndex] = useState<number | null>(null)
+
+  const stories: StoryItem[] = [
+    ...javidCampaigns.map((c, i) => ({
+      id: `jc-${i}`,
+      title: c.title,
+      description: c.description,
+      link: c.link,
+      type: "campaign" as const,
+      source: "javid" as const,
+      participation_count: c.participation_count,
+      images: c.images,
+    })),
+    ...javidPetitions.map((p, i) => ({
+      id: `jp-${i}`,
+      title: p.title,
+      description: p.description,
+      link: p.link,
+      type: "petition" as const,
+      source: "javid" as const,
+      participation_count: p.participation_count,
+      images: p.images,
+    })),
+    ...campaigns.map((c) => ({
+      id: `ic-${c.id}`,
+      title: c.title,
+      description: c.description,
+      link: c.link,
+      type: "campaign" as const,
+      source: "internal" as const,
+      email_to: c.email_to,
+      subject_base: c.subject_base,
+      body_base: c.body_base,
+    })),
+    ...petitions.map((p) => ({
+      id: `ip-${p.id}`,
+      title: p.title,
+      description: p.description,
+      link: p.link,
+      type: "petition" as const,
+      source: "internal" as const,
+    })),
+  ]
+
+  if (stories.length === 0) return null
+
+  const gradients: Record<string, [string, string]> = {
+    "campaign-javid": ["#f59e0b", "#ea580c"],
+    "petition-javid": ["#f59e0b", "#d97706"],
+    "campaign-internal": ["#2dd4a8", "#1aab88"],
+    "petition-internal": ["#e74c5e", "#c93a4b"],
+  }
+
+  return (
+    <>
+      <div className="w-full overflow-x-auto px-4 py-4 border-b border-neutral-200/60 bg-white/50">
+        <div className="mx-auto max-w-[1400px]">
+          <div className="flex gap-4 pb-1" style={{ minWidth: "min-content" }}>
+            {stories.map((story, idx) => {
+              const key = `${story.type}-${story.source}`
+              const [from, to] = gradients[key] || ["#888", "#666"]
+              const emoji = story.type === "campaign" ? "📧" : "✍️"
+              const truncTitle = story.title.length > 12 ? story.title.slice(0, 11) + "…" : story.title
+              return (
+                <button
+                  key={story.id}
+                  onClick={() => setActiveIndex(idx)}
+                  className="flex flex-col items-center gap-1.5 group flex-shrink-0"
+                >
+                  <div
+                    className="flex h-[68px] w-[68px] items-center justify-center rounded-full p-[3px]"
+                    style={{ background: `linear-gradient(135deg, ${from}, ${to})` }}
+                  >
+                    <div className="flex h-full w-full items-center justify-center rounded-full bg-white group-hover:bg-neutral-50 transition-colors">
+                      <span className="text-xl">{emoji}</span>
+                    </div>
+                  </div>
+                  <span className="block w-[72px] text-center text-[10px] font-medium text-neutral-600 leading-tight truncate">
+                    {truncTitle}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      </div>
+
+      {activeIndex !== null && stories[activeIndex] && (
+        <StoryOverlay
+          item={stories[activeIndex]}
+          onClose={() => setActiveIndex(null)}
+          onPrev={() => setActiveIndex((p) => Math.max(0, (p ?? 0) - 1))}
+          onNext={() => setActiveIndex((p) => Math.min(stories.length - 1, (p ?? 0) + 1))}
+          hasPrev={activeIndex > 0}
+          hasNext={activeIndex < stories.length - 1}
+        />
+      )}
+    </>
+  )
+}
+
+// ------------------------------------------------------------------
+// Collapsible Column (Dropdown/Accordion)
 // ------------------------------------------------------------------
 function PersonColumn({
   title,
   persons,
   side,
   search,
+  clickCounts,
+  onEmailSent,
+  defaultOpen = true,
 }: {
   title: string
   persons: Person[]
   side: Side
   search: string
+  clickCounts: Record<string, number>
+  onEmailSent: () => void
+  defaultOpen?: boolean
 }) {
+  const [open, setOpen] = useState(defaultOpen)
   const [selectedPerson, setSelectedPerson] = useState<Person | null>(null)
 
   const filtered = persons.filter((p) => {
@@ -519,53 +823,109 @@ function PersonColumn({
     )
   })
 
-  const sorted = sortPersons(filtered)
+  const sorted = sortPersons(filtered, clickCounts)
 
   const bgColor = side === "antiwar" ? "#fdf0f0" : "#e6faf4"
   const titleColor = side === "antiwar" ? "#c93a4b" : "#1aab88"
 
   const persianTitle = side === "antiwar"
-    ? "چهره‌های مترقی جهانی"
+    ? "چهره‌های مخالف جهانی"
     : "حامیان آزادی ایران"
   const subtitle = side === "antiwar"
     ? "Influential Social Media Voices"
     : "Most Influential Faces"
 
-  return (
-    <div className="flex-1 py-6 px-4" style={{ backgroundColor: bgColor }}>
-      <h2
-        className="text-center text-xs font-bold uppercase tracking-widest mb-1"
-        style={{ color: titleColor }}
-      >
-        {title}
-      </h2>
-      <p className="text-center text-sm font-semibold text-neutral-600 mb-1" dir="rtl">
-        {persianTitle}
-      </p>
-      <p className="text-center text-[11px] text-neutral-500 mb-6">
-        {subtitle}
-      </p>
+  const totalPersons = filtered.length
+  const coveredCount = filtered.filter(
+    (p) => (clickCounts[getHandleClean(p.x_handle).toLowerCase()] ?? 0) >= EMAIL_THRESHOLD
+  ).length
 
-      {sorted.length === 0 ? (
-        <p className="text-center text-sm text-neutral-400 py-8">No results found</p>
-      ) : (
-        <div className="flex flex-wrap justify-center gap-3">
-          {sorted.map((person) => (
-            <AvatarCard
-              key={`${person.id}-${person.x_handle}`}
-              person={person}
-              side={side}
-              onClick={() => setSelectedPerson(person)}
-            />
-          ))}
+  return (
+    <div className="rounded-2xl overflow-hidden border border-neutral-200/60 shadow-sm">
+      {/* Dropdown header */}
+      <button
+        onClick={() => setOpen(!open)}
+        className="w-full flex items-center justify-between px-5 py-4 transition-colors hover:opacity-90"
+        style={{ backgroundColor: bgColor }}
+      >
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-full" style={{ backgroundColor: titleColor + "20" }}>
+            <svg className="h-5 w-5" style={{ color: titleColor }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              {side === "antiwar" ? (
+                <><circle cx="12" cy="12" r="10" /><path d="M2 12h20" /></>
+              ) : (
+                <><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></>
+              )}
+            </svg>
+          </div>
+          <div className="text-left">
+            <h2 className="text-sm font-bold uppercase tracking-wide" style={{ color: titleColor }}>
+              {title}
+            </h2>
+            <p className="text-xs text-neutral-500">
+              {persianTitle} · {subtitle}
+            </p>
+          </div>
         </div>
-      )}
+        <div className="flex items-center gap-3">
+          <span className="text-xs text-neutral-400">{coveredCount}/{totalPersons}</span>
+          <svg
+            className={`h-5 w-5 text-neutral-400 transition-transform duration-300 ${open ? "rotate-180" : ""}`}
+            viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+          >
+            <path d="M6 9l6 6 6-6" />
+          </svg>
+        </div>
+      </button>
+
+      {/* Collapsible content */}
+      <div
+        className={`transition-all duration-300 overflow-hidden ${open ? "max-h-[5000px] opacity-100" : "max-h-0 opacity-0"}`}
+        style={{ backgroundColor: bgColor }}
+      >
+        <div className="px-5 pb-5">
+          {/* Coverage bar */}
+          <div className="mx-auto mb-4 max-w-xs">
+            <div className="flex items-center justify-between text-[10px] text-neutral-500 mb-1">
+              <span>Coverage: {coveredCount}/{totalPersons}</span>
+              <span>{totalPersons > 0 ? Math.round((coveredCount / totalPersons) * 100) : 0}%</span>
+            </div>
+            <div className="h-1 w-full rounded-full bg-neutral-200 overflow-hidden">
+              <div
+                className="h-full rounded-full transition-all duration-700"
+                style={{
+                  width: `${totalPersons > 0 ? (coveredCount / totalPersons) * 100 : 0}%`,
+                  backgroundColor: titleColor,
+                }}
+              />
+            </div>
+          </div>
+
+          {sorted.length === 0 ? (
+            <p className="text-center text-sm text-neutral-400 py-8">No results found</p>
+          ) : (
+            <div className="flex flex-wrap justify-center gap-3">
+              {sorted.map((person) => (
+                <AvatarCard
+                  key={`${person.id}-${person.x_handle}`}
+                  person={person}
+                  side={side}
+                  onClick={() => setSelectedPerson(person)}
+                  emailCount={clickCounts[getHandleClean(person.x_handle).toLowerCase()] ?? 0}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
 
       {selectedPerson && (
         <PersonModal
           person={selectedPerson}
           side={side}
           onClose={() => setSelectedPerson(null)}
+          emailCount={clickCounts[getHandleClean(selectedPerson.x_handle).toLowerCase()] ?? 0}
+          onEmailSent={onEmailSent}
         />
       )}
     </div>
@@ -578,8 +938,25 @@ function PersonColumn({
 export default function SocialMediaRadar() {
   const [democrats, setDemocrats] = useState<Person[]>([])
   const [republicans, setRepublicans] = useState<Person[]>([])
+  const [campaigns, setCampaigns] = useState<EmailCampaign[]>([])
+  const [petitions, setPetitions] = useState<Petition[]>([])
+  const [javidCampaigns, setJavidCampaigns] = useState<JavidCampaign[]>([])
+  const [javidPetitions, setJavidPetitions] = useState<JavidPetition[]>([])
   const [search, setSearch] = useState("")
   const [loading, setLoading] = useState(true)
+  const [clickCounts, setClickCounts] = useState<Record<string, number>>({})
+
+  const fetchClickCounts = useCallback(async () => {
+    try {
+      const res = await fetch("/api/email-clicks")
+      if (res.ok) {
+        const data = await res.json()
+        setClickCounts(data)
+      }
+    } catch {
+      // silently fail
+    }
+  }, [])
 
   useEffect(() => {
     Promise.all([
@@ -592,7 +969,17 @@ export default function SocialMediaRadar() {
       })
       .catch((err) => console.error("Failed to load data:", err))
       .finally(() => setLoading(false))
-  }, [])
+
+    getCampaigns().then((d) => setCampaigns(d.campaigns)).catch(() => {})
+    getPetitions().then((d) => setPetitions(d.petitions)).catch(() => {})
+    getJavidCampaigns().then(setJavidCampaigns).catch(() => {})
+    getJavidPetitions().then(setJavidPetitions).catch(() => {})
+    fetchClickCounts()
+  }, [fetchClickCounts])
+
+  const handleEmailSent = useCallback(() => {
+    setTimeout(fetchClickCounts, 500)
+  }, [fetchClickCounts])
 
   return (
     <main className="min-h-screen" style={{ backgroundColor: "#f5f5f7", fontFamily: "Inter, sans-serif" }}>
@@ -617,69 +1004,51 @@ export default function SocialMediaRadar() {
             </div>
           </div>
 
-          <div className="w-full sm:w-auto">
+          <div className="flex items-center gap-3 w-full sm:w-auto">
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search by name, role, or handle..."
-              className="w-full sm:w-72 rounded-full border border-neutral-200 bg-neutral-50 px-4 py-2 text-sm text-neutral-800 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-[#2dd4a8]/50 focus:border-[#2dd4a8]"
+              className="flex-1 sm:w-60 rounded-full border border-neutral-200 bg-neutral-50 px-4 py-2 text-sm text-neutral-800 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-[#2dd4a8]/50 focus:border-[#2dd4a8]"
             />
           </div>
         </div>
       </header>
+
+      {/* Stories bar — Campaigns & Petitions like Instagram stories */}
+      <StoriesBar campaigns={campaigns} petitions={petitions} javidCampaigns={javidCampaigns} javidPetitions={javidPetitions} />
 
       {loading ? (
         <div className="flex items-center justify-center py-32">
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-neutral-200 border-t-[#2dd4a8]" />
         </div>
       ) : (
-        <>
-          {/* Desktop layout (>= 900px) */}
-          <div className="hidden min-[900px]:flex mx-auto max-w-[1400px]">
+        <div className="mx-auto max-w-[1400px] px-4 py-6 grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+          <div className="order-2 md:order-1">
             <PersonColumn
               title="GLOBAL PROGRESSIVE FIGURES"
               persons={democrats}
               side="antiwar"
               search={search}
+              clickCounts={clickCounts}
+              onEmailSent={handleEmailSent}
+              defaultOpen={true}
             />
+          </div>
 
-            {/* Vertical separator */}
-            <div className="relative flex items-center shrink-0">
-              <div className="h-full w-px bg-gradient-to-b from-[#e74c5e] via-neutral-300 to-[#2dd4a8]" />
-              <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 -rotate-90 whitespace-nowrap rounded-full bg-white px-4 py-2 text-[10px] font-semibold uppercase tracking-widest text-neutral-400 shadow-sm border border-neutral-100">
-                Global Influence Separator
-              </div>
-            </div>
-
+          <div className="order-1 md:order-2">
             <PersonColumn
               title="IRAN LIBERATION ADVOCATES"
               persons={republicans}
               side="prowar"
               search={search}
+              clickCounts={clickCounts}
+              onEmailSent={handleEmailSent}
+              defaultOpen={true}
             />
           </div>
-
-          {/* Mobile layout (< 900px) — two columns side by side */}
-          <div className="min-[900px]:hidden relative">
-            <div className="grid grid-cols-2">
-              <PersonColumn
-                title="GLOBAL PROGRESSIVE FIGURES"
-                persons={democrats}
-                side="antiwar"
-                search={search}
-              />
-              <PersonColumn
-                title="IRAN LIBERATION ADVOCATES"
-                persons={republicans}
-                side="prowar"
-                search={search}
-              />
-            </div>
-            {/* Vertical separator overlay */}
-            <div className="pointer-events-none absolute inset-y-0 left-1/2 -translate-x-1/2 w-px bg-gradient-to-b from-[#e74c5e] via-neutral-300 to-[#2dd4a8]" />
-          </div>
-        </>
+        </div>
       )}
 
       {/* Footer */}
