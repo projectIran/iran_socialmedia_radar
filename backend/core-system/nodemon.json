@@ -1,0 +1,3 @@
+{
+  "ignore": ["swagger-output.json", "node_modules"]
+}

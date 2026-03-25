@@ -8,7 +8,11 @@ Monorepo for the Iran Social Media Radar: frontend and backend services.
 |--------|-------------|
 | **[`frontend/`](frontend/README.md)** | Next.js 16 app — figure radar (global progressives and Iran liberation advocates), modal, and email template |
 | **[`backend/`](backend/README.md)** | Backend services (each run separately): |
+<<<<<<< HEAD
 | → **[`backend/social-media-radar/`](backend/social-media-radar/README.md)** | Legacy: FastAPI + Vanilla JS, JSON data, LLM-based email generation API |
+=======
+| → **[`backend/core-system/`](backend/core-system/README.md)** | Core backend: Node.js API (users, co-hosts, permissions). [Design pattern & architecture →](backend/core-system/docs/design-pattern.md) |
+>>>>>>> 31f8e5e2f388371d3413bb88dabc1cc541e14390
 | → **[`backend/telegram-radar/`](backend/telegram-radar/README.md)** | Python bot that monitors X (Twitter) trends and forwards posts to Telegram |
 
 ---
@@ -17,11 +21,20 @@ Monorepo for the Iran Social Media Radar: frontend and backend services.
 
 ### Frontend (Next.js)
 
+<<<<<<< HEAD
 From the **repo root**:
+=======
+From the **frontend** folder:
+>>>>>>> 31f8e5e2f388371d3413bb88dabc1cc541e14390
 
 ```bash
+cd frontend
 pnpm install
+<<<<<<< HEAD
 pnpm dev        # runs frontend at http://localhost:3000
+=======
+pnpm dev        # http://localhost:3000
+>>>>>>> 31f8e5e2f388371d3413bb88dabc1cc541e14390
 pnpm build      # production build
 pnpm start      # serve the build (run after build)
 ```
@@ -32,7 +45,11 @@ See **[frontend/README.md](frontend/README.md)** for details.
 
 Each backend project is independent. See **[backend/README.md](backend/README.md)** for an overview and links to:
 
+<<<<<<< HEAD
 - **social-media-radar:** [backend/social-media-radar/README.md](backend/social-media-radar/README.md) — `pip install -r requirements.txt && python server.py`
+=======
+- **core-system:** [backend/core-system/README.md](backend/core-system/README.md) — Core API (auth, users, co-hosts). Technical structure: [backend/core-system/docs/design-pattern.md](backend/core-system/docs/design-pattern.md)
+>>>>>>> 31f8e5e2f388371d3413bb88dabc1cc541e14390
 - **telegram-radar:** [backend/telegram-radar/README.md](backend/telegram-radar/README.md) — install, env setup, and run instructions
 
 ---
@@ -54,4 +71,8 @@ If you tackle one of these, update this README with progress so newcomers can gr
 
 ## Contributing
 
+<<<<<<< HEAD
 Issues and pull requests are welcome. For visual changes include screenshots; for new dependencies add a short explanation.
+=======
+Issues and pull requests are welcome. See **[CONTRIBUTING.md](CONTRIBUTING.md)** for how to work on a feature or bug (branching, build/lint checks, and what to do before opening a PR). For visual changes include screenshots; for new dependencies add a short explanation.
+>>>>>>> 31f8e5e2f388371d3413bb88dabc1cc541e14390

@@ -1,5 +1,9 @@
 # Dependencies
 node_modules/
+<<<<<<< HEAD
+=======
+package-lock.json
+>>>>>>> 31f8e5e2f388371d3413bb88dabc1cc541e14390
 
 # Next.js / frontend
 .next/
@@ -38,3 +42,9 @@ backend/telegram-radar/radar.log
 # Build / deploy
 .netlify
 dist/
+<<<<<<< HEAD
+=======
+
+# Local dev data
+.data/
+>>>>>>> 31f8e5e2f388371d3413bb88dabc1cc541e14390
