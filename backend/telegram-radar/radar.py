@@ -25,11 +25,14 @@ from pathlib import Path
 
 try:
     from dotenv import load_dotenv
+except ImportError:
+    print("Error: python-dotenv not installed. Run: pip install python-dotenv requests")
+    sys.exit(1)
+
+try:
     import tweepy
 except ImportError:
-    print("Error: Required packages not installed.")
-    print("Run: pip install tweepy python-dotenv requests")
-    sys.exit(1)
+    tweepy = None
 
 SCRIPT_DIR = Path(__file__).parent
 
@@ -47,6 +50,7 @@ if not ENV_PATH.exists():
 load_dotenv(ENV_PATH)
 
 SEEN_FILE = SCRIPT_DIR / "seen_tweets.json"
+SEEN_JAVID_FILE = SCRIPT_DIR / "seen_javid.json"
 STATS_FILE = SCRIPT_DIR / "stats.json"
 LOG_FILE = SCRIPT_DIR / "radar.log"
 
@@ -69,6 +73,10 @@ SEARCH_INTERVAL = int(os.environ.get("SEARCH_INTERVAL_MINUTES", "60"))
 MIN_LIKES = int(os.environ.get("MIN_LIKES", "100"))
 MIN_RETWEETS = int(os.environ.get("MIN_RETWEETS", "20"))
 MAX_RESULTS = int(os.environ.get("MAX_RESULTS", "10"))
+
+JAVID_API_URL = os.environ.get("JAVID_API_URL", "https://api.javidfighter.com")
+JAVID_API_KEY = os.environ.get("JAVID_API_KEY", "")
+JAVID_CHECK_INTERVAL = int(os.environ.get("JAVID_CHECK_INTERVAL_MINUTES", "15"))
 
 # --- Search Queries ---
 # Rotating queries to maximize coverage with minimal API calls.
@@ -101,8 +109,6 @@ signal.signal(signal.SIGTERM, signal_handler)
 
 def check_config():
     missing = []
-    if not X_BEARER_TOKEN:
-        missing.append("X_BEARER_TOKEN")
     if not TG_BOT_TOKEN:
         missing.append("TELEGRAM_BOT_TOKEN")
     if not TG_CHAT_ID:
@@ -110,6 +116,14 @@ def check_config():
     if missing:
         logger.error(f"Missing config: {', '.join(missing)}")
         logger.error("Set them in your .env file. See .env.example")
+        sys.exit(1)
+
+    if not X_BEARER_TOKEN:
+        logger.warning("X_BEARER_TOKEN not set — X/Twitter monitoring disabled")
+    if not JAVID_API_KEY:
+        logger.warning("JAVID_API_KEY not set — Javid Fighter integration disabled")
+    if not X_BEARER_TOKEN and not JAVID_API_KEY:
+        logger.error("No data source configured. Set X_BEARER_TOKEN and/or JAVID_API_KEY.")
         sys.exit(1)
 
 
@@ -155,7 +169,10 @@ def update_stats(sent_count: int, searched_count: int):
         json.dump(stats, f, indent=2)
 
 
-def create_x_client() -> tweepy.Client:
+def create_x_client():
+    if not tweepy:
+        logger.error("tweepy not installed. Run: pip install tweepy")
+        return None
     return tweepy.Client(
         bearer_token=X_BEARER_TOKEN,
         wait_on_rate_limit=True
@@ -263,8 +280,8 @@ def format_telegram_message(tweet: dict) -> str:
     )
 
 
-def send_to_telegram(message: str, dry_run: bool = False) -> bool:
-    """Send formatted message to Telegram."""
+def send_to_telegram(message: str, dry_run: bool = False, reply_markup: dict | None = None) -> bool:
+    """Send formatted message to Telegram with optional inline keyboard."""
     if dry_run:
         logger.info(f"[DRY RUN] Would send to Telegram:\n{message}\n")
         return True
@@ -276,6 +293,8 @@ def send_to_telegram(message: str, dry_run: bool = False) -> bool:
         "parse_mode": "HTML",
         "disable_web_page_preview": False,
     }
+    if reply_markup:
+        payload["reply_markup"] = reply_markup
 
     try:
         resp = requests.post(url, json=payload, timeout=30)
@@ -286,6 +305,231 @@ def send_to_telegram(message: str, dry_run: bool = False) -> bool:
     except Exception as e:
         logger.error(f"Telegram send failed: {e}")
         return False
+
+
+# ── Javid Fighter API Integration ──
+
+def load_seen_javid() -> set:
+    if not SEEN_JAVID_FILE.exists():
+        return set()
+    try:
+        with open(SEEN_JAVID_FILE, "r") as f:
+            return set(json.load(f))
+    except Exception:
+        return set()
+
+
+def save_seen_javid(seen: set):
+    with open(SEEN_JAVID_FILE, "w") as f:
+        json.dump(list(seen), f, indent=2)
+
+
+def javid_item_id(item: dict) -> str:
+    """Use the link as unique ID (contains campaign/petition code)."""
+    return item.get("link", "") or item.get("title", "")[:80].strip()
+
+
+def fetch_javid_campaigns() -> list[dict]:
+    try:
+        resp = requests.get(
+            f"{JAVID_API_URL}/api/v1/email_campaigns",
+            headers={"x-api-key": JAVID_API_KEY},
+            timeout=30,
+        )
+        if resp.status_code == 200:
+            return resp.json().get("items", [])
+    except Exception as e:
+        logger.error(f"Javid campaigns fetch failed: {e}")
+    return []
+
+
+def fetch_javid_petitions() -> list[dict]:
+    try:
+        resp = requests.get(
+            f"{JAVID_API_URL}/api/v1/petitions",
+            headers={"x-api-key": JAVID_API_KEY},
+            timeout=30,
+        )
+        if resp.status_code == 200:
+            return resp.json().get("items", [])
+    except Exception as e:
+        logger.error(f"Javid petitions fetch failed: {e}")
+    return []
+
+
+def _truncate_for_caption(text: str, has_images: bool) -> str:
+    """Telegram caption limit: 1024 chars for photos, 4096 for plain text."""
+    limit = 1024 if has_images else 4096
+    if len(text) <= limit:
+        return text
+    return text[:limit - 3] + "..."
+
+
+def format_javid_campaign(item: dict) -> str:
+    title = item.get("title", "")
+    desc = item.get("description", "")
+    link = item.get("link", "")
+    count = item.get("participation_count", 0)
+    has_images = bool(item.get("images"))
+
+    header = (
+        f"📧 <b>کمپین ایمیلی</b>\n"
+        f"━━━━━━━━━━━━━━━━━━━━\n\n"
+        f"<b>{title}</b>\n\n"
+    )
+    footer = (
+        f"\n\n━━━━━━━━━━━━━━━━━━━━\n"
+        f"👥 {count} نفر شرکت کرده‌اند\n\n"
+        f"🔗 <a href=\"{link}\">شرکت در کمپین</a>"
+    )
+    max_desc = (1024 if has_images else 4096) - len(header) - len(footer) - 10
+    if len(desc) > max_desc:
+        desc = desc[:max(0, max_desc - 3)] + "..."
+
+    return _truncate_for_caption(header + desc + footer, has_images)
+
+
+def format_javid_petition(item: dict) -> str:
+    title = item.get("title", "")
+    desc = item.get("description", "")
+    link = item.get("link", "")
+    count = item.get("participation_count", 0)
+    has_images = bool(item.get("images"))
+
+    header = (
+        f"✍️ <b>کارزار (پتیشن)</b>\n"
+        f"━━━━━━━━━━━━━━━━━━━━\n\n"
+        f"<b>{title}</b>\n\n"
+    )
+    footer = (
+        f"\n\n━━━━━━━━━━━━━━━━━━━━\n"
+        f"👥 {count} نفر امضا کرده‌اند\n\n"
+        f"🔗 <a href=\"{link}\">امضای کارزار</a>"
+    )
+    max_desc = (1024 if has_images else 4096) - len(header) - len(footer) - 10
+    if len(desc) > max_desc:
+        desc = desc[:max(0, max_desc - 3)] + "..."
+
+    return _truncate_for_caption(header + desc + footer, has_images)
+
+
+def send_photo_to_telegram(photo_url: str, caption: str, dry_run: bool = False, reply_markup: dict | None = None) -> bool:
+    if dry_run:
+        logger.info(f"[DRY RUN] Would send photo to Telegram:\n{caption[:100]}...\n")
+        return True
+
+    url = f"https://api.telegram.org/bot{TG_BOT_TOKEN}/sendPhoto"
+    payload = {
+        "chat_id": TG_CHAT_ID,
+        "photo": photo_url,
+        "caption": caption,
+        "parse_mode": "HTML",
+    }
+    if reply_markup:
+        payload["reply_markup"] = reply_markup
+    try:
+        resp = requests.post(url, json=payload, timeout=30)
+        if resp.status_code == 200:
+            return True
+        logger.error(f"Telegram sendPhoto error {resp.status_code}: {resp.text}")
+        return False
+    except Exception as e:
+        logger.error(f"Telegram sendPhoto failed: {e}")
+        return False
+
+
+def send_media_group_to_telegram(photos: list[str], caption: str, dry_run: bool = False, reply_markup: dict | None = None) -> bool:
+    """Send multiple photos as album with caption on first photo.
+    sendMediaGroup doesn't support reply_markup, so for albums we send
+    a follow-up text message with the inline keyboard buttons."""
+    if dry_run:
+        logger.info(f"[DRY RUN] Would send {len(photos)} photos to Telegram\n")
+        return True
+
+    if not photos:
+        return send_to_telegram(caption, dry_run, reply_markup)
+
+    if len(photos) == 1:
+        return send_photo_to_telegram(photos[0], caption, dry_run, reply_markup)
+
+    media = []
+    for i, url in enumerate(photos[:10]):
+        item = {"type": "photo", "media": url}
+        if i == 0:
+            item["caption"] = caption
+            item["parse_mode"] = "HTML"
+        media.append(item)
+
+    url = f"https://api.telegram.org/bot{TG_BOT_TOKEN}/sendMediaGroup"
+    payload = {"chat_id": TG_CHAT_ID, "media": media}
+    try:
+        resp = requests.post(url, json=payload, timeout=30)
+        if resp.status_code == 200:
+            if reply_markup:
+                time.sleep(1)
+                send_to_telegram("👇", dry_run=False, reply_markup=reply_markup)
+            return True
+        logger.error(f"Telegram sendMediaGroup error {resp.status_code}: {resp.text}")
+        return send_photo_to_telegram(photos[0], caption, dry_run, reply_markup)
+    except Exception as e:
+        logger.error(f"Telegram sendMediaGroup failed: {e}")
+        return False
+
+
+def run_javid_cycle(dry_run: bool = False) -> int:
+    """Fetch Javid Fighter campaigns & petitions, send new ones to Telegram."""
+    if not JAVID_API_KEY:
+        return 0
+
+    seen = load_seen_javid()
+    sent = 0
+
+    campaigns = fetch_javid_campaigns()
+    petitions = fetch_javid_petitions()
+    logger.info(f"Javid Fighter: {len(campaigns)} campaigns, {len(petitions)} petitions")
+
+    for item in campaigns:
+        item_id = javid_item_id(item)
+        if not item_id or item_id in seen:
+            continue
+        caption = format_javid_campaign(item)
+        images = item.get("images", [])
+        link = item.get("link", "")
+        keyboard = None
+        if link:
+            keyboard = {"inline_keyboard": [[{"text": "📧 شرکت در کمپین", "url": link}]]}
+        if images:
+            ok = send_media_group_to_telegram(images, caption, dry_run, keyboard)
+        else:
+            ok = send_to_telegram(caption, dry_run, keyboard)
+        if ok:
+            sent += 1
+            seen.add(item_id)
+            time.sleep(4)
+
+    for item in petitions:
+        item_id = javid_item_id(item)
+        if not item_id or item_id in seen:
+            continue
+        caption = format_javid_petition(item)
+        images = item.get("images", [])
+        link = item.get("link", "")
+        keyboard = None
+        if link:
+            keyboard = {"inline_keyboard": [[{"text": "✍️ امضای کارزار", "url": link}]]}
+        if images:
+            ok = send_media_group_to_telegram(images, caption, dry_run, keyboard)
+        else:
+            ok = send_to_telegram(caption, dry_run, keyboard)
+        if ok:
+            sent += 1
+            seen.add(item_id)
+            time.sleep(4)
+
+    save_seen_javid(seen)
+    if sent:
+        logger.info(f"Javid Fighter: sent {sent} new items to Telegram")
+    return sent
 
 
 def run_cycle(query: str, dry_run: bool = False) -> tuple[int, int]:
@@ -304,7 +548,8 @@ def run_cycle(query: str, dry_run: bool = False) -> tuple[int, int]:
 
     for tweet in tweets:
         msg = format_telegram_message(tweet)
-        if send_to_telegram(msg, dry_run):
+        keyboard = {"inline_keyboard": [[{"text": "🔗 مشاهده در X", "url": tweet["url"]}]]}
+        if send_to_telegram(msg, dry_run, keyboard):
             sent_count += 1
             time.sleep(1.5)
         seen[tweet["id"]] = now
@@ -319,49 +564,81 @@ def run_once(dry_run: bool = False):
     total_sent = 0
     total_searched = 0
 
-    for query in SEARCH_QUERIES:
-        sent, searched = run_cycle(query, dry_run)
-        total_sent += sent
-        total_searched += searched
-        time.sleep(2)
+    javid_sent = run_javid_cycle(dry_run)
+    total_sent += javid_sent
+
+    if X_BEARER_TOKEN:
+        for query in SEARCH_QUERIES:
+            sent, searched = run_cycle(query, dry_run)
+            total_sent += sent
+            total_searched += searched
+            time.sleep(2)
 
     update_stats(total_sent, total_searched)
-    logger.info(f"Done. Sent {total_sent} posts to Telegram.")
+    logger.info(f"Done. Sent {total_sent} posts to Telegram (including {javid_sent} from Javid Fighter).")
 
 
 def run_continuous(dry_run: bool = False):
     """Run continuously, rotating through queries."""
     check_config()
 
+    javid_enabled = bool(JAVID_API_KEY)
+
     logger.info("=" * 50)
     logger.info("Telegram Radar Started")
-    logger.info(f"  Interval: every {SEARCH_INTERVAL} minutes")
-    logger.info(f"  Filters: {MIN_LIKES}+ likes OR {MIN_RETWEETS}+ retweets")
-    logger.info(f"  Queries: {len(SEARCH_QUERIES)} (rotating)")
+    x_enabled = bool(X_BEARER_TOKEN)
+
+    if x_enabled:
+        logger.info(f"  X Interval: every {SEARCH_INTERVAL} minutes")
+        logger.info(f"  Filters: {MIN_LIKES}+ likes OR {MIN_RETWEETS}+ retweets")
+        logger.info(f"  Queries: {len(SEARCH_QUERIES)} (rotating)")
+    else:
+        logger.info("  X/Twitter: disabled (no bearer token)")
+    logger.info(f"  Javid Fighter: {'enabled (every ' + str(JAVID_CHECK_INTERVAL) + ' min)' if javid_enabled else 'disabled (no API key)'}")
     logger.info(f"  Chat ID: {TG_CHAT_ID}")
     logger.info("=" * 50)
 
     query_idx = 0
+    last_javid_check = 0
+
+    if javid_enabled:
+        logger.info("Running initial Javid Fighter sync (all campaigns & petitions)...")
+        try:
+            javid_sent = run_javid_cycle(dry_run)
+            if javid_sent:
+                logger.info(f"Initial sync: sent {javid_sent} items from Javid Fighter")
+            last_javid_check = time.time()
+        except Exception as e:
+            logger.error(f"Javid Fighter initial sync error: {e}")
 
     while running:
-        query = SEARCH_QUERIES[query_idx % len(SEARCH_QUERIES)]
-        query_idx += 1
+        if x_enabled:
+            query = SEARCH_QUERIES[query_idx % len(SEARCH_QUERIES)]
+            query_idx += 1
 
-        logger.info(f"\n--- Cycle {query_idx} (Query {(query_idx - 1) % len(SEARCH_QUERIES) + 1}/{len(SEARCH_QUERIES)}) ---")
+            logger.info(f"\n--- Cycle {query_idx} (Query {(query_idx - 1) % len(SEARCH_QUERIES) + 1}/{len(SEARCH_QUERIES)}) ---")
 
-        try:
-            sent, searched = run_cycle(query, dry_run)
-            update_stats(sent, searched)
-            if sent:
-                logger.info(f"Sent {sent} new posts to Telegram")
-        except Exception as e:
-            logger.error(f"Cycle error: {e}")
+            try:
+                sent, searched = run_cycle(query, dry_run)
+                update_stats(sent, searched)
+                if sent:
+                    logger.info(f"Sent {sent} new posts to Telegram")
+            except Exception as e:
+                logger.error(f"Cycle error: {e}")
+
+        if javid_enabled and (time.time() - last_javid_check) >= JAVID_CHECK_INTERVAL * 60:
+            try:
+                javid_sent = run_javid_cycle(dry_run)
+                last_javid_check = time.time()
+            except Exception as e:
+                logger.error(f"Javid Fighter cycle error: {e}")
 
         if not running:
             break
 
-        jitter = random.randint(-120, 120)
-        sleep_secs = SEARCH_INTERVAL * 60 + jitter
+        base_interval = SEARCH_INTERVAL if x_enabled else JAVID_CHECK_INTERVAL
+        jitter = random.randint(-60, 60)
+        sleep_secs = base_interval * 60 + jitter
         next_time = datetime.now() + timedelta(seconds=sleep_secs)
         logger.info(f"Next check at {next_time.strftime('%H:%M:%S')} ({sleep_secs // 60}m {sleep_secs % 60}s)")
 
