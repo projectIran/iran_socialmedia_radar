@@ -1,20 +1,9 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
-import { getCampaigns, getPetitions, getJavidCampaigns, getJavidPetitions, type EmailCampaign, type Petition, type JavidCampaign, type JavidPetition } from "@/lib/api"
-import emailData from "@/lib/emailData"
-
-interface Person {
-  id: number
-  name: string
-  role: string
-  x_handle: string
-  email: string
-  category: string
-  priority: "high" | "medium" | "low"
-}
-
-type Side = "antiwar" | "prowar"
+import { useState, useEffect, useRef, useCallback } from "react"
+import Link from "next/link"
+import { useAuth } from "@/lib/auth-context"
+import { IRAN_LIBERATION_CAMPAIGNS } from "./iran-liberation-campaigns"
 
 // ------------------------------------------------------------------
 // Types
@@ -181,7 +170,77 @@ const translations = {
   },
 }
 
-const EMAIL_THRESHOLD = Number(process.env.NEXT_PUBLIC_EMAIL_THRESHOLD) || 100
+// Mock campaigns now imported from iran-liberation-campaigns.ts
+// Keeping this comment for reference - data moved to separate file
+const MOCK_CAMPAIGNS_REMOVED = [
+  // Email campaigns (15 items)
+  { id: "1", title: "آزادی زندانیان سیاسی", type: "email", weight: 24, description: "خواستار آزادی زندانیان سیاسی بازداشت‌شده بدون محاکمه.", sampleContent: "بیش از ۲۰ هزار زندانی سیاسی برای بیان مسالمت‌آمیز عقایدشان در زندان هستند.", actionLabel: "ارسال ایمیل", color: "#0d9488", participants: 4820, upvotes: 2340, downvotes: 120, shareLink: "https://radar.example.com/c/1" },
+  { id: "5", title: "حمایت از آزادی مطبوعات", type: "email", weight: 14, description: "نامه به سازمان‌های رسانه‌ای و دولت‌ها برای محکوم کردن دستگیری روزنامه‌نگاران.", sampleContent: "روزنامه‌نگاران چشم و گوش جهان هستند.", actionLabel: "ارسال ایمیل", color: "#14b8a6", participants: 1890, upvotes: 980, downvotes: 55, shareLink: "https://radar.example.com/c/5" },
+  { id: "9", title: "کمپین حریم خصوصی دیجیتال", type: "email", weight: 9, description: "فشار بر شرکت‌های فناوری برای توقف فروش تکنولوژی نظارتی.", sampleContent: "تکنولوژی شما برای ردیابی فعالان استفاده می‌شود.", actionLabel: "ارسال ایمیل", color: "#2dd4bf", participants: 1560, upvotes: 890, downvotes: 40, shareLink: "https://radar.example.com/c/9" },
+  { id: "13", title: "حمایت از میراث فرهنگی", type: "email", weight: 6, description: "حفاظت از مکان‌های فرهنگی در معرض خطر.", sampleContent: "هزاران سال میراث فرهنگی در خطر است.", actionLabel: "ارسال ایمیل", color: "#0f766e", participants: 670, upvotes: 420, downvotes: 20, shareLink: "https://radar.example.com/c/13" },
+  { id: "17", title: "ابزارهای ضد سانسور", type: "email", weight: 4, description: "حمایت از ابزارهایی که به مردم کمک می‌کند سانسور را دور بزنند.", sampleContent: "VPNها شریان حیات میلیون‌ها نفر هستند.", actionLabel: "ارسال ایمیل", color: "#115e59", participants: 540, upvotes: 340, downvotes: 15, shareLink: "https://radar.example.com/c/17" },
+  { id: "21", title: "تحریم شرکت‌های متخلف", type: "email", weight: 11, description: "درخواست از شرکت‌ها برای قطع همکاری با رژیم.", sampleContent: "شرکت‌های بین‌المللی نباید با نقض حقوق بشر همکاری کنند.", actionLabel: "ارسال ایمیل", color: "#0d9488", participants: 2340, upvotes: 1450, downvotes: 78, shareLink: "https://radar.example.com/c/21" },
+  { id: "25", title: "پایان اعدام‌های سیاسی", type: "email", weight: 18, description: "مخالفت با اعدام فعالان سیاسی و مدنی.", sampleContent: "اعدام فعالان سیاسی جنایت علیه بشریت است.", actionLabel: "ارسال ایمیل", color: "#14b8a6", participants: 5120, upvotes: 3240, downvotes: 156, shareLink: "https://radar.example.com/c/25" },
+  { id: "29", title: "آزادی معلمان زندانی", type: "email", weight: 7, description: "خواستار آزادی معلمان بازداشت‌شده.", sampleContent: "معلمان برای آموزش و تعلیم زندانی شده‌اند.", actionLabel: "ارسال ایمیل", color: "#2dd4bf", participants: 1230, upvotes: 780, downvotes: 42, shareLink: "https://radar.example.com/c/29" },
+  { id: "33", title: "حمایت از کارگران معدن", type: "email", weight: 5, description: "توجه به شرایط کارگران معادن.", sampleContent: "کارگران معادن در شرایط غیرانسانی کار می‌کنند.", actionLabel: "ارسال ایمیل", color: "#0f766e", participants: 890, upvotes: 540, downvotes: 28, shareLink: "https://radar.example.com/c/33" },
+  { id: "37", title: "لغو حکم شلاق", type: "email", weight: 8, description: "مخالفت با مجازات شلاق.", sampleContent: "شلاق شکنجه است و باید لغو شود.", actionLabel: "ارسال ایمیل", color: "#115e59", participants: 1670, upvotes: 1020, downvotes: 51, shareLink: "https://radar.example.com/c/37" },
+  { id: "41", title: "حمایت از وکلای حقوق بشر", type: "email", weight: 10, description: "دفاع از وکلای مدافع حقوق بشر.", sampleContent: "وکلای حقوق بشر تحت فشار و تهدید هستند.", actionLabel: "ارسال ایمیل", color: "#0d9488", participants: 2100, upvotes: 1340, downvotes: 67, shareLink: "https://radar.example.com/c/41" },
+  { id: "45", title: "پایان سانسور کتاب", type: "email", weight: 4, description: "مخالفت با سانسور کتاب و نشر.", sampleContent: "کتاب‌ها پل ارتباطی فرهنگ‌ها هستند.", actionLabel: "ارسال ایمیل", color: "#14b8a6", participants: 780, upvotes: 490, downvotes: 23, shareLink: "https://radar.example.com/c/45" },
+  { id: "49", title: "حمایت از هنرمندان آزاد", type: "email", weight: 6, description: "دفاع از آزادی بیان هنری.", sampleContent: "هنر باید آزاد باشد از سانسور و محدودیت.", actionLabel: "ارسال ایمیل", color: "#2dd4bf", participants: 1340, upvotes: 820, downvotes: 38, shareLink: "https://radar.example.com/c/49" },
+  { id: "53", title: "توقف آزار کودکان کار", type: "email", weight: 9, description: "حمایت از کودکان کار و خیابانی.", sampleContent: "میلیون‌ها کودک مجبور به کار هستند.", actionLabel: "ارسال ایمیل", color: "#0f766e", participants: 1890, upvotes: 1150, downvotes: 58, shareLink: "https://radar.example.com/c/53" },
+  { id: "57", title: "لغو ممنوعیت سفر", type: "email", weight: 5, description: "اعتراض به ممنوعیت خروج از کشور.", sampleContent: "ممنوعیت سفر نقض آشکار حقوق انسانی است.", actionLabel: "ارسال ایمیل", color: "#115e59", participants: 1120, upvotes: 690, downvotes: 34, shareLink: "https://radar.example.com/c/57" },
+
+  // Tweet campaigns (15 items)
+  { id: "2", title: "توقف قطع اینترنت", type: "tweet", weight: 20, description: "افزایش آگاهی درباره قطع اینترنت.", sampleContent: "قطع اینترنت ابزار سرکوب است. #KeepItOn", actionLabel: "ارسال توییت", color: "#3b82f6", participants: 3150, upvotes: 1890, downvotes: 85, shareLink: "https://radar.example.com/c/2" },
+  { id: "6", title: "تحریم ناقضان حقوق بشر", type: "tweet", weight: 13, description: "درخواست تحریم‌های هدفمند.", sampleContent: "مقامات ناقض حقوق بشر باید تحریم شوند.", actionLabel: "ارسال توییت", color: "#6366f1", participants: 2310, upvotes: 1340, downvotes: 95, shareLink: "https://radar.example.com/c/6" },
+  { id: "10", title: "جنبش وحدت دیاسپورا", type: "tweet", weight: 8, description: "ایجاد همبستگی جوامع دیاسپورا.", sampleContent: "دیاسپورا متحد ایستاده است. #DiasporaUnited", actionLabel: "ارسال توییت", color: "#8b5cf6", participants: 4100, upvotes: 2340, downvotes: 150, shareLink: "https://radar.example.com/c/10" },
+  { id: "14", title: "شبکه همبستگی دانشجویی", type: "tweet", weight: 6, description: "اتصال دانشجویان اخراجی.", sampleContent: "دانشگاه‌ها درهای خود را باز کنید.", actionLabel: "ارسال توییت", color: "#4f46e5", participants: 1780, upvotes: 1020, downvotes: 55, shareLink: "https://radar.example.com/c/14" },
+  { id: "18", title: "روز آگاهی جهانی", type: "tweet", weight: 4, description: "کمپین هماهنگ رسانه‌های اجتماعی.", sampleContent: "جهان با یک صدا صحبت می‌کند.", actionLabel: "ارسال توییت", color: "#7c3aed", participants: 7200, upvotes: 4120, downvotes: 230, shareLink: "https://radar.example.com/c/18" },
+  { id: "22", title: "روز جهانی زن", type: "tweet", weight: 15, description: "بزرگداشت مبارزات زنان ایرانی.", sampleContent: "زنان ایرانی پیشگامان تغییرند. #WomanLifeFreedom", actionLabel: "ارسال توییت", color: "#3b82f6", participants: 8900, upvotes: 5340, downvotes: 267, shareLink: "https://radar.example.com/c/22" },
+  { id: "26", title: "همبستگی با بازداشت‌شدگان", type: "tweet", weight: 11, description: "پویش روزانه یادآوری زندانیان.", sampleContent: "هر روز نام یک زندانی سیاسی را منتشر کنید.", actionLabel: "ارسال توییت", color: "#6366f1", participants: 3450, upvotes: 2100, downvotes: 112, shareLink: "https://radar.example.com/c/26" },
+  { id: "30", title: "کمپین #آزادی_بیان", type: "tweet", weight: 9, description: "دفاع از حق آزادی بیان.", sampleContent: "آزادی بیان حق هر انسانی است.", actionLabel: "ارسال توییت", color: "#8b5cf6", participants: 2890, upvotes: 1670, downvotes: 89, shareLink: "https://radar.example.com/c/30" },
+  { id: "34", title: "توقف اعدام نوجوانان", type: "tweet", weight: 12, description: "مخالفت با اعدام افراد زیر ۱۸ سال.", sampleContent: "اعدام نوجوانان جنایت جنگی است.", actionLabel: "ارسال توییت", color: "#4f46e5", participants: 4560, upvotes: 2890, downvotes: 145, shareLink: "https://radar.example.com/c/34" },
+  { id: "38", title: "حمایت از LGBTQ+", type: "tweet", weight: 7, description: "دفاع از حقوق دگرباشان جنسی.", sampleContent: "عشق جرم نیست. #LoveIsLove", actionLabel: "ارسال توییت", color: "#7c3aed", participants: 1980, upvotes: 1240, downvotes: 78, shareLink: "https://radar.example.com/c/38" },
+  { id: "42", title: "نه به جنگ", type: "tweet", weight: 10, description: "مخالفت با تنش‌های نظامی.", sampleContent: "مردم خواهان صلح هستند نه جنگ.", actionLabel: "ارسال توییت", color: "#3b82f6", participants: 3670, upvotes: 2230, downvotes: 118, shareLink: "https://radar.example.com/c/42" },
+  { id: "46", title: "حمایت از ورزشکاران", type: "tweet", weight: 5, description: "دفاع از ورزشکارانی که صدایشان را بلند کرده‌اند.", sampleContent: "ورزشکاران صدای مردم هستند.", actionLabel: "ارسال توییت", color: "#6366f1", participants: 2340, upvotes: 1450, downvotes: 72, shareLink: "https://radar.example.com/c/46" },
+  { id: "50", title: "آزادی مذهبی", type: "tweet", weight: 6, description: "دفاع از حق انتخاب مذهب.", sampleContent: "هر کس حق دارد مذهب خود را انتخاب کند.", actionLabel: "ارسال توییت", color: "#8b5cf6", participants: 1560, upvotes: 960, downvotes: 48, shareLink: "https://radar.example.com/c/50" },
+  { id: "54", title: "کمپین #توقف_تبعیض", type: "tweet", weight: 8, description: "مبارزه با تبعیض قومی و مذهبی.", sampleContent: "تبعیض باید متوقف شود. همه برابریم.", actionLabel: "ارسال توییت", color: "#4f46e5", participants: 2780, upvotes: 1690, downvotes: 85, shareLink: "https://radar.example.com/c/54" },
+  { id: "58", title: "صدای جوانان", type: "tweet", weight: 7, description: "تقویت صدای نسل جوان.", sampleContent: "جوانان آینده‌ساز ایران هستند.", actionLabel: "ارسال توییت", color: "#7c3aed", participants: 3210, upvotes: 1950, downvotes: 98, shareLink: "https://radar.example.com/c/58" },
+
+  // Donation campaigns (15 items)
+  { id: "3", title: "حمایت از حقوق زنان", type: "donation", weight: 18, description: "تأمین بودجه برای سازمان‌های حقوقی.", sampleContent: "حمایت از نمایندگی حقوقی زنان.", actionLabel: "کمک مالی", color: "#f59e0b", participants: 2740, upvotes: 1560, downvotes: 45, shareLink: "https://radar.example.com/c/3" },
+  { id: "7", title: "صندوق دسترسی به آموزش", type: "donation", weight: 11, description: "کمک به دانشجویان اخراجی.", sampleContent: "حمایت از تحصیل دانشجویان در خارج.", actionLabel: "کمک مالی", color: "#d97706", participants: 980, upvotes: 620, downvotes: 30, shareLink: "https://radar.example.com/c/7" },
+  { id: "11", title: "کمک پزشکی برای قربانیان", type: "donation", weight: 8, description: "ارائه کمک پزشکی به مجروحان.", sampleContent: "درمان حیاتی از طریق شبکه‌های زیرزمینی.", actionLabel: "کمک مالی", color: "#b45309", participants: 1230, upvotes: 780, downvotes: 25, shareLink: "https://radar.example.com/c/11" },
+  { id: "15", title: "صندوق دفاع حقوقی", type: "donation", weight: 5, description: "نمایندگی حقوقی فعالان.", sampleContent: "حمایت از وکلای مدافع آزادی.", actionLabel: "کمک مالی", color: "#92400e", participants: 890, upvotes: 560, downvotes: 18, shareLink: "https://radar.example.com/c/15" },
+  { id: "19", title: "شبکه حمایت از پناهندگان", type: "donation", weight: 3, description: "کمک به پناهندگان و پناهجویان.", sampleContent: "سرپناه و امید برای آغاز جدید.", actionLabel: "کمک مالی", color: "#78350f", participants: 1100, upvotes: 720, downvotes: 28, shareLink: "https://radar.example.com/c/19" },
+  { id: "23", title: "صندوق کمک به خانواده‌های زندانیان", type: "donation", weight: 14, description: "حمایت مالی از خانواده‌های زندانیان سیاسی.", sampleContent: "خانواده‌های زندانیان نیاز به حمایت دارند.", actionLabel: "کمک مالی", color: "#f59e0b", participants: 3450, upvotes: 2180, downvotes: 109, shareLink: "https://radar.example.com/c/23" },
+  { id: "27", title: "کمک به کودکان بی‌سرپرست", type: "donation", weight: 10, description: "حمایت از کودکان بی‌سرپرست و آسیب‌دیده.", sampleContent: "هر کودک شایسته زندگی بهتر است.", actionLabel: "کمک مالی", color: "#d97706", participants: 2670, upvotes: 1650, downvotes: 83, shareLink: "https://radar.example.com/c/27" },
+  { id: "31", title: "صندوق حمایت از معلولین", type: "donation", weight: 6, description: "کمک به افراد دارای معلولیت.", sampleContent: "فراهم کردن امکانات برای زندگی بهتر.", actionLabel: "کمک مالی", color: "#b45309", participants: 1450, upvotes: 890, downvotes: 44, shareLink: "https://radar.example.com/c/31" },
+  { id: "35", title: "حمایت از سالمندان", type: "donation", weight: 4, description: "کمک به سالمندان بی‌بضاعت.", sampleContent: "سالمندان نیاز به مراقبت و احترام دارند.", actionLabel: "کمک مالی", color: "#92400e", participants: 780, upvotes: 490, downvotes: 24, shareLink: "https://radar.example.com/c/35" },
+  { id: "39", title: "صندوق بازسازی زلزله", type: "donation", weight: 9, description: "کمک به آسیب‌دیدگان زلزله.", sampleContent: "بازسازی زندگی پس از فاجعه.", actionLabel: "کمک مالی", color: "#78350f", participants: 4230, upvotes: 2680, downvotes: 134, shareLink: "https://radar.example.com/c/39" },
+  { id: "43", title: "کمک به بیماران سرطانی", type: "donation", weight: 7, description: "حمایت از بیماران فاقد بیمه.", sampleContent: "هر کس حق دارد به درمان دسترسی داشته باشد.", actionLabel: "کمک مالی", color: "#f59e0b", participants: 2120, upvotes: 1340, downvotes: 67, shareLink: "https://radar.example.com/c/43" },
+  { id: "47", title: "صندوق کمک به معتادین", type: "donation", weight: 5, description: "حمایت از درمان اعتیاد.", sampleContent: "اعتیاد بیماری است نه جرم.", actionLabel: "کمک مالی", color: "#d97706", participants: 1340, upvotes: 830, downvotes: 41, shareLink: "https://radar.example.com/c/47" },
+  { id: "51", title: "حمایت از بانوان سرپرست خانوار", type: "donation", weight: 8, description: "کمک به زنان سرپرست خانواده.", sampleContent: "زنان قهرمان خانواده‌های خود هستند.", actionLabel: "کمک مالی", color: "#b45309", participants: 1980, upvotes: 1220, downvotes: 61, shareLink: "https://radar.example.com/c/51" },
+  { id: "55", title: "صندوق کمک به دانش‌آموزان", type: "donation", weight: 6, description: "تأمین لوازم تحریر و کتاب برای دانش‌آموزان.", sampleContent: "هر کودک حق دارد به آموزش دسترسی داشته باشد.", actionLabel: "کمک مالی", color: "#92400e", participants: 1670, upvotes: 1030, downvotes: 51, shareLink: "https://radar.example.com/c/55" },
+  { id: "59", title: "کمک به بیماران کلیوی", type: "donation", weight: 4, description: "حمایت از بیماران دیالیزی.", sampleContent: "دیالیز هزینه‌بر است و بسیاری توان پرداخت ندارند.", actionLabel: "کمک مالی", color: "#78350f", participants: 890, upvotes: 550, downvotes: 27, shareLink: "https://radar.example.com/c/59" },
+
+  // Petition campaigns (15 items)
+  { id: "4", title: "تحقیق حقوق بشر سازمان ملل", type: "petition", weight: 16, description: "درخواست تحقیقات مستقل.", sampleContent: "عدالت مستلزم پاسخگویی است.", actionLabel: "امضای پتیشن", color: "#e11d48", participants: 6230, upvotes: 3420, downvotes: 210, shareLink: "https://radar.example.com/c/4" },
+  { id: "8", title: "پتیشن حقوق کارگران", type: "petition", weight: 10, description: "حمایت از حق سازماندهی کارگران.", sampleContent: "کارگران سزاوار سازماندهی مسالمت‌آمیز هستند.", actionLabel: "امضای پتیشن", color: "#f43f5e", participants: 3450, upvotes: 1890, downvotes: 110, shareLink: "https://radar.example.com/c/8" },
+  { id: "12", title: "عدالت زیست‌محیطی", type: "petition", weight: 7, description: "درخواست پاسخگویی برای تخریب زیست‌محیطی.", sampleContent: "تخریب محیط زیست موضوع حقوق بشری است.", actionLabel: "امضای پتیشن", color: "#fb7185", participants: 2890, upvotes: 1670, downvotes: 90, shareLink: "https://radar.example.com/c/12" },
+  { id: "16", title: "حمایت از حقوق اقلیت‌ها", type: "petition", weight: 5, description: "درخواست حقوق برابر برای اقلیت‌ها.", sampleContent: "همه سزاوار حقوق برابر هستند.", actionLabel: "امضای پتیشن", color: "#be123c", participants: 4560, upvotes: 2780, downvotes: 180, shareLink: "https://radar.example.com/c/16" },
+  { id: "20", title: "حقیقت و آشتی", type: "petition", weight: 3, description: "فرآیند مستندسازی نقض‌ها.", sampleContent: "عدالت نیازمند حقیقت است.", actionLabel: "امضای پتیشن", color: "#9f1239", participants: 3670, upvotes: 2120, downvotes: 140, shareLink: "https://radar.example.com/c/20" },
+  { id: "24", title: "لغو مجازات اعدام", type: "petition", weight: 19, description: "پتیشن برای لغو کامل مجازات اعدام.", sampleContent: "اعدام نقض حق حیات است.", actionLabel: "امضای پتیشن", color: "#e11d48", participants: 9870, upvotes: 6120, downvotes: 312, shareLink: "https://radar.example.com/c/24" },
+  { id: "28", title: "حق تجمع مسالمت‌آمیز", type: "petition", weight: 12, description: "دفاع از حق اعتراض مسالمت‌آمیز.", sampleContent: "اعتراض مسالمت‌آمیز حق هر شهروند است.", actionLabel: "امضای پتیشن", color: "#f43f5e", participants: 5670, upvotes: 3450, downvotes: 178, shareLink: "https://radar.example.com/c/28" },
+  { id: "32", title: "آزادی احزاب سیاسی", type: "petition", weight: 8, description: "خواست فعالیت آزاد احزاب.", sampleContent: "دموکراسی نیازمند تکثر سیاسی است.", actionLabel: "امضای پتیشن", color: "#fb7185", participants: 3120, upvotes: 1890, downvotes: 95, shareLink: "https://radar.example.com/c/32" },
+  { id: "36", title: "حق آموزش به زبان مادری", type: "petition", weight: 6, description: "درخواست آموزش به زبان‌های محلی.", sampleContent: "هر کودک حق دارد به زبان مادری آموزش ببیند.", actionLabel: "امضای پتیشن", color: "#be123c", participants: 2340, upvotes: 1450, downvotes: 72, shareLink: "https://radar.example.com/c/36" },
+  { id: "40", title: "لغو تبعیض جنسیتی در قوانین", type: "petition", weight: 15, description: "حذف قوانین تبعیض‌آمیز علیه زنان.", sampleContent: "زنان و مردان باید حقوق برابر داشته باشند.", actionLabel: "امضای پتیشن", color: "#9f1239", participants: 7890, upvotes: 4890, downvotes: 245, shareLink: "https://radar.example.com/c/40" },
+  { id: "44", title: "حق انتخاب آزاد", type: "petition", weight: 11, description: "درخواست انتخابات آزاد و عادلانه.", sampleContent: "مردم حق دارند رهبران خود را انتخاب کنند.", actionLabel: "امضای پتیشن", color: "#e11d48", participants: 6780, upvotes: 4120, downvotes: 207, shareLink: "https://radar.example.com/c/44" },
+  { id: "48", title: "لغو سانسور اینترنت", type: "petition", weight: 9, description: "خواست اینترنت آزاد و بدون فیلتر.", sampleContent: "دسترسی به اطلاعات حق همگان است.", actionLabel: "امضای پتیشن", color: "#f43f5e", participants: 8230, upvotes: 5010, downvotes: 251, shareLink: "https://radar.example.com/c/48" },
+  { id: "52", title: "حمایت از استقلال قوه قضائیه", type: "petition", weight: 7, description: "درخواست قضاوت عادلانه و مستقل.", sampleContent: "عدالت نیازمند قوه قضائیه مستقل است.", actionLabel: "امضای پتیشن", color: "#fb7185", participants: 3890, upvotes: 2360, downvotes: 118, shareLink: "https://radar.example.com/c/52" },
+  { id: "56", title: "لغو قوانین ارتداد", type: "petition", weight: 4, description: "مخالفت با مجازات ارتداد.", sampleContent: "ایمان امری شخصی است.", actionLabel: "امضای پتیشن", color: "#be123c", participants: 2120, upvotes: 1310, downvotes: 65, shareLink: "https://radar.example.com/c/56" },
+  { id: "60", title: "آزادی دانشجویان زندانی", type: "petition", weight: 13, description: "خواستار آزادی دانشجویان بازداشتی.", sampleContent: "دانشجویان باید در کلاس باشند نه زندان.", actionLabel: "امضای پتیشن", color: "#9f1239", participants: 7120, upvotes: 4340, downvotes: 217, shareLink: "https://radar.example.com/c/60" },
+]
 
 // ------------------------------------------------------------------
 // Squarified Treemap Layout Algorithm
@@ -1004,174 +1063,61 @@ function StoryOverlay({
               <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
           </div>
-          <h2 className="text-xl font-bold text-white leading-tight">{item.title}</h2>
-          {item.participation_count != null && item.participation_count > 0 && (
-            <p className="mt-2 text-sm text-white/80">👥 {item.participation_count.toLocaleString()} participants</p>
-          )}
-        </div>
 
-        <div className="bg-white p-6 rounded-b-2xl">
-          {item.images && item.images.length > 0 && (
-            <div className="mb-4 -mx-2">
-              {item.images.map((img, i) => (
-                <img key={i} src={img} alt="" className="w-full rounded-lg mb-2 last:mb-0" />
+          {/* Sharing ribbon at bottom - INSIDE modal */}
+          <div className="sticky bottom-0 border-t border-neutral-200 bg-gradient-to-r from-neutral-50 to-neutral-100 px-5 py-4">
+            <p className="text-xs font-semibold text-neutral-700 mb-3">{t.shareThisCampaign}</p>
+            <div className="flex items-center gap-2 flex-wrap">
+              {/* Copy link button */}
+              <button
+                onClick={handleCopy}
+                className="flex items-center gap-1.5 rounded-lg bg-white border border-neutral-200 px-3 py-2 text-xs font-medium text-neutral-700 hover:bg-neutral-50 transition-all"
+              >
+                <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
+                  <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
+                </svg>
+                {copied ? t.copied : t.copyLink}
+              </button>
+
+              {/* Social share buttons */}
+              {socialShares.map((social) => (
+                <a
+                  key={social.name}
+                  href={social.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => onUpvote()}
+                  className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium text-white transition-all hover:brightness-110"
+                  style={{ backgroundColor: social.color }}
+                >
+                  <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor">
+                    <path d={social.icon} />
+                  </svg>
+                  {social.name}
+                </a>
               ))}
             </div>
-          )}
-
-          <p className="text-sm text-neutral-600 leading-relaxed whitespace-pre-line">
-            {item.description || "No description available."}
-          </p>
-
-          <a
-            href={actionHref}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={`mt-5 flex w-full items-center justify-center gap-2 rounded-xl px-5 py-3.5 text-sm font-bold text-white transition-transform hover:scale-[1.02] active:scale-[0.98] ${
-              isCampaign
-                ? "bg-gradient-to-r from-amber-500 to-orange-500"
-                : "bg-gradient-to-r from-rose-500 to-pink-500"
-            }`}
-          >
-            {actionLabel}
-          </a>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function StoriesBar({
-  campaigns,
-  petitions,
-  javidCampaigns,
-  javidPetitions,
-}: {
-  campaigns: EmailCampaign[]
-  petitions: Petition[]
-  javidCampaigns: JavidCampaign[]
-  javidPetitions: JavidPetition[]
-}) {
-  const [activeIndex, setActiveIndex] = useState<number | null>(null)
-
-  const stories: StoryItem[] = [
-    ...javidCampaigns.map((c, i) => ({
-      id: `jc-${i}`,
-      title: c.title,
-      description: c.description,
-      link: c.link,
-      type: "campaign" as const,
-      source: "javid" as const,
-      participation_count: c.participation_count,
-      images: c.images,
-    })),
-    ...javidPetitions.map((p, i) => ({
-      id: `jp-${i}`,
-      title: p.title,
-      description: p.description,
-      link: p.link,
-      type: "petition" as const,
-      source: "javid" as const,
-      participation_count: p.participation_count,
-      images: p.images,
-    })),
-    ...campaigns.map((c) => ({
-      id: `ic-${c.id}`,
-      title: c.title,
-      description: c.description,
-      link: c.link,
-      type: "campaign" as const,
-      source: "internal" as const,
-      email_to: c.email_to,
-      subject_base: c.subject_base,
-      body_base: c.body_base,
-    })),
-    ...petitions.map((p) => ({
-      id: `ip-${p.id}`,
-      title: p.title,
-      description: p.description,
-      link: p.link,
-      type: "petition" as const,
-      source: "internal" as const,
-    })),
-  ]
-
-  if (stories.length === 0) return null
-
-  const gradients: Record<string, [string, string]> = {
-    "campaign-javid": ["#f59e0b", "#ea580c"],
-    "petition-javid": ["#f59e0b", "#d97706"],
-    "campaign-internal": ["#2dd4a8", "#1aab88"],
-    "petition-internal": ["#e74c5e", "#c93a4b"],
-  }
-
-  return (
-    <>
-      <div className="w-full overflow-x-auto px-4 py-4 border-b border-neutral-200/60 bg-white/50">
-        <div className="mx-auto max-w-[1400px]">
-          <div className="flex gap-4 pb-1" style={{ minWidth: "min-content" }}>
-            {stories.map((story, idx) => {
-              const key = `${story.type}-${story.source}`
-              const [from, to] = gradients[key] || ["#888", "#666"]
-              const emoji = story.type === "campaign" ? "📧" : "✍️"
-              const truncTitle = story.title.length > 12 ? story.title.slice(0, 11) + "…" : story.title
-              return (
-                <button
-                  key={story.id}
-                  onClick={() => setActiveIndex(idx)}
-                  className="flex flex-col items-center gap-1.5 group flex-shrink-0"
-                >
-                  <div
-                    className="flex h-[68px] w-[68px] items-center justify-center rounded-full p-[3px]"
-                    style={{ background: `linear-gradient(135deg, ${from}, ${to})` }}
-                  >
-                    <div className="flex h-full w-full items-center justify-center rounded-full bg-white group-hover:bg-neutral-50 transition-colors">
-                      <span className="text-xl">{emoji}</span>
-                    </div>
-                  </div>
-                  <span className="block w-[72px] text-center text-[10px] font-medium text-neutral-600 leading-tight truncate">
-                    {truncTitle}
-                  </span>
-                </button>
-              )
-            })}
           </div>
         </div>
       </div>
-
-      {activeIndex !== null && stories[activeIndex] && (
-        <StoryOverlay
-          item={stories[activeIndex]}
-          onClose={() => setActiveIndex(null)}
-          onPrev={() => setActiveIndex((p) => Math.max(0, (p ?? 0) - 1))}
-          onNext={() => setActiveIndex((p) => Math.min(stories.length - 1, (p ?? 0) + 1))}
-          hasPrev={activeIndex > 0}
-          hasNext={activeIndex < stories.length - 1}
-        />
-      )}
     </>
   )
 }
 
 // ------------------------------------------------------------------
-// Collapsible Column (Dropdown/Accordion)
+// Campaign Treemap
 // ------------------------------------------------------------------
-function PersonColumn({
-  title,
-  persons,
-  side,
-  search,
-  clickCounts,
-  onEmailSent,
-  defaultOpen = true,
+function CampaignTreemap({
+  campaigns,
+  onSelect,
+  onQuickAction,
+  lang,
 }: {
-  title: string
-  persons: Person[]
-  side: Side
-  search: string
-  clickCounts: Record<string, number>
-  onEmailSent: () => void
-  defaultOpen?: boolean
+  campaigns: TreemapCampaign[]
+  onSelect: (campaign: TreemapCampaign) => void
+  onQuickAction: (campaign: TreemapCampaign, action: "share" | "promote" | "feedback") => void
+  lang: "fa" | "en"
 }) {
   const [open, setOpen] = useState(defaultOpen)
   const [selectedPerson, setSelectedPerson] = useState<Person | null>(null)
@@ -1266,22 +1212,41 @@ function PersonColumn({
 // Main Page
 // ------------------------------------------------------------------
 export default function SocialMediaRadar() {
-  const [democrats, setDemocrats] = useState<Person[]>([])
-  const [republicans, setRepublicans] = useState<Person[]>([])
-  const [campaigns, setCampaigns] = useState<EmailCampaign[]>([])
-  const [petitions, setPetitions] = useState<Petition[]>([])
-  const [javidCampaigns, setJavidCampaigns] = useState<JavidCampaign[]>([])
-  const [javidPetitions, setJavidPetitions] = useState<JavidPetition[]>([])
-  const [search, setSearch] = useState("")
-  const [loading, setLoading] = useState(true)
-  const [clickCounts, setClickCounts] = useState<Record<string, number>>({})
+  const { user, role, logout } = useAuth()
+  const [selectedCampaign, setSelectedCampaign] = useState<TreemapCampaign | null>(null)
+  const [showCreateModal, setShowCreateModal] = useState(false)
+  const [showSuccessModal, setShowSuccessModal] = useState<string | null>(null)
+  const [campaigns, setCampaigns] = useState<TreemapCampaign[]>(IRAN_LIBERATION_CAMPAIGNS)
+  const [lang, setLang] = useState<"fa" | "en">("fa")
+  const [categoryFilter, setCategoryFilter] = useState<TreemapCampaign["type"] | "all">("all")
 
-  const fetchClickCounts = useCallback(async () => {
-    try {
-      const res = await fetch("/api/email-clicks")
-      if (res.ok) {
-        const data = await res.json()
-        setClickCounts(data)
+  const t = translations[lang]
+
+  const filteredCampaigns = categoryFilter === "all"
+    ? campaigns
+    : campaigns.filter((c) => c.type === categoryFilter)
+
+  const handleUpvote = (campaignId: string) => {
+    setCampaigns((prev) =>
+      prev.map((c) =>
+        c.id === campaignId ? { ...c, upvotes: c.upvotes + 1, weight: c.weight + 0.1 } : c
+      )
+    )
+  }
+
+  const handleDownvote = (campaignId: string) => {
+    setCampaigns((prev) =>
+      prev.map((c) =>
+        c.id === campaignId ? { ...c, downvotes: c.downvotes + 1, weight: Math.max(1, c.weight - 0.1) } : c
+      )
+    )
+  }
+
+  const handleQuickAction = (campaign: TreemapCampaign, action: "share" | "promote" | "feedback") => {
+    if (action === "share") {
+      handleUpvote(campaign.id)
+      if (campaign.shareLink) {
+        setShowSuccessModal(campaign.shareLink)
       }
     } else if (action === "promote") {
       alert(`${lang === "fa" ? "تبلیغ کمپین" : "Promote campaign"}: ${campaign.title}`)
@@ -1290,28 +1255,13 @@ export default function SocialMediaRadar() {
     }
   }
 
-  useEffect(() => {
-    Promise.all([
-      fetch("/data/democrats.json").then((r) => r.json()),
-      fetch("/data/republicans.json").then((r) => r.json()),
-    ])
-      .then(([dems, reps]) => {
-        setDemocrats(dems)
-        setRepublicans(reps)
-      })
-      .catch((err) => console.error("Failed to load data:", err))
-      .finally(() => setLoading(false))
-
-    getCampaigns().then((d) => setCampaigns(d.campaigns)).catch(() => {})
-    getPetitions().then((d) => setPetitions(d.petitions)).catch(() => {})
-    getJavidCampaigns().then(setJavidCampaigns).catch(() => {})
-    getJavidPetitions().then(setJavidPetitions).catch(() => {})
-    fetchClickCounts()
-  }, [fetchClickCounts])
-
-  const handleEmailSent = useCallback(() => {
-    setTimeout(fetchClickCounts, 500)
-  }, [fetchClickCounts])
+  const categories = [
+    { type: "all" as const, label: t.allCategories, color: "#6b7280" },
+    { type: "email" as const, label: t.email, color: "#0d9488" },
+    { type: "tweet" as const, label: t.tweet, color: "#3b82f6" },
+    { type: "donation" as const, label: t.donation, color: "#f59e0b" },
+    { type: "petition" as const, label: t.petition, color: "#e11d48" },
+  ]
 
   return (
     <main className="h-screen flex flex-col" style={{ backgroundColor: "#f5f5f7", fontFamily: "Inter, sans-serif" }} dir={lang === "fa" ? "rtl" : "ltr"}>
@@ -1336,49 +1286,95 @@ export default function SocialMediaRadar() {
             </div>
           </div>
 
-          <div className="flex items-center gap-3 w-full sm:w-auto">
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by name, role, or handle..."
-              className="flex-1 sm:w-60 rounded-full border border-neutral-200 bg-neutral-50 px-4 py-2 text-sm text-neutral-800 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-[#2dd4a8]/50 focus:border-[#2dd4a8]"
-            />
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setLang(lang === "fa" ? "en" : "fa")}
+              className="shrink-0 rounded-lg bg-neutral-100 px-3 py-2 text-xs font-medium text-neutral-600 hover:bg-neutral-200"
+            >
+              {lang === "fa" ? "EN" : "فا"}
+            </button>
+
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="shrink-0 rounded-xl bg-gradient-to-r from-[#2dd4a8] to-[#1aab88] px-5 py-3 text-sm font-bold text-white hover:opacity-90 shadow-lg hover:shadow-xl transition-all"
+            >
+              {t.createCampaign}
+            </button>
+
+            {user ? (
+              <>
+                {(role === "admin" || role === "cohost") && (
+                  <Link href="/admin" className="shrink-0 rounded-lg bg-neutral-800 px-3 py-2 text-xs font-semibold text-white hover:bg-neutral-700">
+                    {t.admin}
+                  </Link>
+                )}
+                <button onClick={logout} className="shrink-0 rounded-lg bg-neutral-100 px-3 py-2 text-xs font-medium text-neutral-600 hover:bg-neutral-200">
+                  {t.logout}
+                </button>
+              </>
+            ) : (
+              <Link href="/login" className="shrink-0 rounded-lg bg-neutral-800 px-3 py-2 text-xs font-semibold text-white hover:bg-neutral-700">
+                {t.signIn}
+              </Link>
+            )}
           </div>
         </div>
       </header>
 
-      {/* Stories bar — Campaigns & Petitions like Instagram stories */}
-      <StoriesBar campaigns={campaigns} petitions={petitions} javidCampaigns={javidCampaigns} javidPetitions={javidPetitions} />
+      {/* Statistics ribbon + Category filter */}
+      <div className="shrink-0 border-b border-neutral-200/60 bg-white/50 px-4 py-3">
+        <div className="mx-auto max-w-7xl flex items-center justify-between gap-4">
+          {/* Statistics on the left */}
+          <div className="flex items-center gap-3 shrink-0">
+            <div className="flex items-center gap-1.5 bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg px-3 py-1.5 border border-blue-200">
+              <svg className="h-4 w-4 text-blue-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                <circle cx="9" cy="7" r="4" />
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
+              </svg>
+              <span className="text-xs font-semibold text-blue-900">{campaigns.reduce((sum, c) => sum + c.participants, 0).toLocaleString()}</span>
+              <span className="text-[10px] text-blue-700">{lang === "fa" ? "بازدید" : "visitors"}</span>
+            </div>
 
-      {loading ? (
-        <div className="flex items-center justify-center py-32">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-neutral-200 border-t-[#2dd4a8]" />
-        </div>
-      ) : (
-        <div className="mx-auto max-w-[1400px] px-4 py-6 grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
-          <div className="order-2 md:order-1">
-            <PersonColumn
-              title="GLOBAL PROGRESSIVE FIGURES"
-              persons={democrats}
-              side="antiwar"
-              search={search}
-              clickCounts={clickCounts}
-              onEmailSent={handleEmailSent}
-              defaultOpen={true}
-            />
+            <div className="flex items-center gap-1.5 bg-gradient-to-r from-green-50 to-green-100 rounded-lg px-3 py-1.5 border border-green-200">
+              <svg className="h-4 w-4 text-green-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                <polyline points="22 4 12 14.01 9 11.01" />
+              </svg>
+              <span className="text-xs font-semibold text-green-900">{campaigns.length}</span>
+              <span className="text-[10px] text-green-700">{lang === "fa" ? "کمپین" : "campaigns"}</span>
+            </div>
+
+            <div className="flex items-center gap-1.5 bg-gradient-to-r from-purple-50 to-purple-100 rounded-lg px-3 py-1.5 border border-purple-200">
+              <svg className="h-4 w-4 text-purple-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              </svg>
+              <span className="text-xs font-semibold text-purple-900">{campaigns.reduce((sum, c) => sum + c.upvotes, 0).toLocaleString()}</span>
+              <span className="text-[10px] text-purple-700">{lang === "fa" ? "ارسال شده" : "sent"}</span>
+            </div>
           </div>
 
-          <div className="order-1 md:order-2">
-            <PersonColumn
-              title="IRAN LIBERATION ADVOCATES"
-              persons={republicans}
-              side="prowar"
-              search={search}
-              clickCounts={clickCounts}
-              onEmailSent={handleEmailSent}
-              defaultOpen={true}
-            />
+          {/* Category filters on the right */}
+          <div className="flex items-center gap-2 overflow-x-auto">
+            {categories.map((cat) => (
+              <button
+                key={cat.type}
+                onClick={() => setCategoryFilter(cat.type)}
+                className={`shrink-0 flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all ${
+                  categoryFilter === cat.type
+                    ? "text-white shadow-md"
+                    : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200"
+                }`}
+                style={
+                  categoryFilter === cat.type
+                    ? { backgroundColor: cat.color }
+                    : undefined
+                }
+              >
+                <span className="inline-block h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: cat.color }} />
+                {cat.label}
+              </button>
+            ))}
           </div>
         </div>
       </div>
