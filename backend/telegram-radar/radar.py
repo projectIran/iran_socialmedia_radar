@@ -276,7 +276,7 @@ def format_telegram_message(tweet: dict) -> str:
         f"{text}\n\n"
         f"━━━━━━━━━━━━━━━━━━━━\n"
         f"❤️ {fmt_num(tweet['likes'])}  🔁 {fmt_num(tweet['retweets'])}  💬 {fmt_num(tweet['replies'])}\n\n"
-        f"🔗 <a href=\"{tweet['url']}\">مشاهده در X</a>"
+        f"🔗 <a href=\"{tweet['url']}\">View on X</a>"
     )
 
 
