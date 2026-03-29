@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react"
 import Link from "next/link"
 import { useAuth } from "@/lib/auth-context"
+import { getCampaigns, getPetitions, type EmailCampaign, type Petition } from "@/lib/api"
 import { IRAN_LIBERATION_CAMPAIGNS } from "./iran-liberation-campaigns"
 
 // ------------------------------------------------------------------
@@ -376,6 +377,105 @@ function getTextColor(bgHex: string): string {
 function formatParticipants(n: number): string {
   if (n >= 1000) return `${(n / 1000).toFixed(1)}k`
   return String(n)
+}
+
+// ------------------------------------------------------------------
+// Backend Campaign Transformer
+// ------------------------------------------------------------------
+function transformBackendCampaigns(
+  emailCampaigns: EmailCampaign[],
+  petitions: Petition[]
+): TreemapCampaign[] {
+  const COLOR_PALETTES = {
+    email: ["#0d9488", "#14b8a6", "#2dd4bf", "#5eead4"],
+    petition: ["#e11d48", "#f43f5e", "#fb7185", "#fda4af"],
+  }
+
+  const result: TreemapCampaign[] = []
+
+  // Transform email campaigns
+  emailCampaigns.forEach((campaign, idx) => {
+    result.push({
+      id: campaign.id,
+      title: campaign.title,
+      titleEn: undefined, // Backend doesn't have English titles yet
+      type: "email",
+      weight: 10 + Math.random() * 15, // Random weight 10-25 for visualization
+      description: campaign.description || "",
+      sampleContent: campaign.subject_base || "",
+      actionLabel: "ارسال ایمیل",
+      color: COLOR_PALETTES.email[idx % COLOR_PALETTES.email.length],
+      participants: 0, // Will be updated from participation_count if available
+      upvotes: 0,
+      downvotes: 0,
+      shareLink: `${window.location.origin}/campaigns/${campaign.direct_link_code}`,
+    })
+  })
+
+  // Transform petitions
+  petitions.forEach((petition, idx) => {
+    result.push({
+      id: petition.id,
+      title: petition.title,
+      titleEn: undefined,
+      type: "petition",
+      weight: 10 + Math.random() * 15,
+      description: petition.description || "",
+      sampleContent: petition.link,
+      actionLabel: "امضای پتیشن",
+      color: COLOR_PALETTES.petition[idx % COLOR_PALETTES.petition.length],
+      participants: 0,
+      upvotes: 0,
+      downvotes: 0,
+      shareLink: `${window.location.origin}/petitions/${petition.direct_link_code}`,
+    })
+  })
+
+  return result
+}
+
+// Fallback to mock data if backend is unavailable
+function useCampaignData() {
+  const [campaigns, setCampaigns] = useState<TreemapCampaign[]>([])
+  const [loading, setLoading] = useState(true)
+  const [usingMockData, setUsingMockData] = useState(false)
+
+  useEffect(() => {
+    async function fetchCampaigns() {
+      try {
+        const [emailRes, petitionRes] = await Promise.all([
+          getCampaigns(),
+          getPetitions(),
+        ])
+
+        const transformed = transformBackendCampaigns(
+          emailRes.campaigns,
+          petitionRes.petitions
+        )
+
+        if (transformed.length === 0) {
+          // No campaigns in database, use mock data
+          console.warn("No campaigns found in database, using mock data")
+          setCampaigns(IRAN_LIBERATION_CAMPAIGNS)
+          setUsingMockData(true)
+        } else {
+          setCampaigns(transformed)
+          setUsingMockData(false)
+        }
+      } catch (error) {
+        console.error("Failed to fetch campaigns from backend:", error)
+        // Fallback to mock data on API error
+        setCampaigns(IRAN_LIBERATION_CAMPAIGNS)
+        setUsingMockData(true)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchCampaigns()
+  }, [])
+
+  return { campaigns, setCampaigns, loading, usingMockData }
 }
 
 const TYPE_ICONS: Record<TreemapCampaign["type"], string> = {
@@ -1131,7 +1231,7 @@ export default function SocialMediaRadar() {
   const [selectedCampaign, setSelectedCampaign] = useState<TreemapCampaign | null>(null)
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [showSuccessModal, setShowSuccessModal] = useState<string | null>(null)
-  const [campaigns, setCampaigns] = useState<TreemapCampaign[]>(IRAN_LIBERATION_CAMPAIGNS)
+  const { campaigns, setCampaigns, loading: campaignsLoading, usingMockData } = useCampaignData()
   const [lang, setLang] = useState<"fa" | "en">("fa")
   const [categoryFilter, setCategoryFilter] = useState<TreemapCampaign["type"] | "all">("all")
 
@@ -1236,8 +1336,41 @@ export default function SocialMediaRadar() {
         </div>
       </header>
 
-      {/* Statistics ribbon + Category filter */}
-      <div className="shrink-0 border-b border-neutral-200/60 bg-white/50 px-4 py-3">
+      {/* Mock Data Warning Banner */}
+      {usingMockData && (
+        <div className="shrink-0 bg-amber-50 border-b border-amber-200 px-4 py-2">
+          <div className="mx-auto max-w-7xl flex items-center gap-2 text-xs text-amber-800">
+            <svg className="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+              <line x1="12" y1="9" x2="12" y2="13" />
+              <line x1="12" y1="17" x2="12.01" y2="17" />
+            </svg>
+            <span className="flex-1">
+              {lang === "fa"
+                ? "⚠️ در حال نمایش داده‌های نمونه - بک‌اند در دسترس نیست یا کمپینی در پایگاه داده وجود ندارد"
+                : "⚠️ Showing mock data - Backend unavailable or no campaigns in database"}
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* Loading State */}
+      {campaignsLoading && (
+        <div className="flex-1 flex items-center justify-center">
+          <div className="flex flex-col items-center gap-3">
+            <div className="h-12 w-12 animate-spin rounded-full border-4 border-neutral-200 border-t-[#2dd4a8]" />
+            <p className="text-sm text-neutral-500">
+              {lang === "fa" ? "در حال بارگذاری کمپین‌ها..." : "Loading campaigns..."}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Main Content - Only show when not loading */}
+      {!campaignsLoading && (
+        <>
+          {/* Statistics ribbon + Category filter */}
+          <div className="shrink-0 border-b border-neutral-200/60 bg-white/50 px-4 py-3">
         <div className="mx-auto max-w-7xl flex items-center justify-between gap-4">
           {/* Statistics on the left */}
           <div className="flex items-center gap-3 shrink-0">
@@ -1305,6 +1438,8 @@ export default function SocialMediaRadar() {
           />
         </div>
       </div>
+        </>
+      )}
 
       {/* Modals */}
       {selectedCampaign && (
