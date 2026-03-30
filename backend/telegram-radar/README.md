@@ -1,4 +1,3 @@
-# Telegram Radar - رادار تلگرامی
 # Telegram Radar
 
 Monitoring bot that:
@@ -12,13 +11,10 @@ Each data source works independently — you can enable Javid Fighter only, X on
 ```bash
 cd backend/telegram-radar
 python -m venv .venv
-source .venv/bin/activate   # مک/لینوکس
-=======
 source .venv/bin/activate   # macOS/Linux
 pip install -r requirements.txt
 ```
 
-## تنظیمات (.env)
 ## Configuration
 
 Two env files for separate environments:

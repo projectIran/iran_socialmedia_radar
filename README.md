@@ -71,8 +71,4 @@ If you tackle one of these, update this README with progress so newcomers can gr
 
 ## Contributing
 
-<<<<<<< HEAD
-Issues and pull requests are welcome. For visual changes include screenshots; for new dependencies add a short explanation.
-=======
 Issues and pull requests are welcome. See **[CONTRIBUTING.md](CONTRIBUTING.md)** for how to work on a feature or bug (branching, build/lint checks, and what to do before opening a PR). For visual changes include screenshots; for new dependencies add a short explanation.
->>>>>>> 31f8e5e2f388371d3413bb88dabc1cc541e14390
