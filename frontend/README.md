@@ -11,6 +11,9 @@ pnpm build
 pnpm start
 ```
 
+<<<<<<< HEAD
+You can also run this app from the repo root with `pnpm dev`.
+=======
 ## Environment variables
 
 | Variable | Required | Default | Description |
@@ -24,12 +27,15 @@ pnpm start
 Copy `.env.example` to `.env.local` and fill in the values:
 
 
+>>>>>>> 31f8e5e2f388371d3413bb88dabc1cc541e14390
 
 ## Structure
 
 - `app/` — App Router pages, `page.tsx` and `layout.tsx`
 - `components/` — Shared UI and shadcn components
 - `hooks/`, `lib/`, `styles/`, `public/`
+<<<<<<< HEAD
+=======
 
 ## Tech stack
 
@@ -37,3 +43,4 @@ Copy `.env.example` to `.env.local` and fill in the values:
 - TypeScript + React 19
 - Tailwind CSS 4
 - Radix-inspired UI components
+>>>>>>> 31f8e5e2f388371d3413bb88dabc1cc541e14390

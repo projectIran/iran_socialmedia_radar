@@ -1047,6 +1047,167 @@ function CampaignDetailModal({
 // ------------------------------------------------------------------
 // Campaign Treemap
 // ------------------------------------------------------------------
+function AvatarCard({
+  person,
+  side,
+  onClick,
+  emailCount,
+}: {
+  person: Person
+  side: Side
+  onClick: () => void
+  emailCount: number
+}) {
+  const accentColor = side === "antiwar" ? "#e74c5e" : "#2dd4a8"
+  const isOverThreshold = emailCount >= EMAIL_THRESHOLD
+  const opacity = isOverThreshold ? "opacity-50" : ""
+
+  return (
+    <button
+      onClick={onClick}
+      className={`group relative flex flex-col items-center focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 rounded-lg p-1 transition-transform hover:scale-105 ${opacity}`}
+      style={{ width: 100 }}
+    >
+      <span
+        className="absolute -top-1 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-full px-2 py-0.5 text-[9px] font-bold text-white"
+        style={{ backgroundColor: isOverThreshold ? "#22c55e" : accentColor }}
+      >
+        {isOverThreshold ? `✓ ${emailCount}` : `${emailCount} / ${EMAIL_THRESHOLD}`}
+      </span>
+      <Avatar person={person} side={side} size={68} />
+      <span className="mt-2 max-w-[90px] text-center text-[11px] font-medium leading-tight text-neutral-700 line-clamp-2">
+        {person.name}
+      </span>
+    </button>
+  )
+}
+
+// ------------------------------------------------------------------
+// Stories Bar (Instagram-style for Campaigns & Petitions)
+// ------------------------------------------------------------------
+type StoryItem = {
+  id: string
+  title: string
+  description: string
+  link: string
+  type: "campaign" | "petition"
+  source: "internal" | "javid"
+  participation_count?: number
+  images?: string[]
+  email_to?: string
+  subject_base?: string
+  body_base?: string
+}
+
+function StoryOverlay({
+  item,
+  onClose,
+  onPrev,
+  onNext,
+  hasPrev,
+  hasNext,
+}: {
+  item: StoryItem
+  onClose: () => void
+  onPrev: () => void
+  onNext: () => void
+  hasPrev: boolean
+  hasNext: boolean
+}) {
+  const isCampaign = item.type === "campaign"
+  const bgGradient = isCampaign
+    ? "from-amber-500/90 via-orange-500/90 to-red-500/90"
+    : "from-rose-500/90 via-pink-500/90 to-purple-500/90"
+
+  const actionLabel = isCampaign ? "📧 ارسال ایمیل" : "✍️ امضای کارزار"
+
+  let actionHref = item.link
+  if (isCampaign && item.email_to) {
+    const subject = encodeURIComponent(item.subject_base || item.title)
+    const body = encodeURIComponent(item.body_base || "")
+    actionHref = `mailto:${item.email_to}?subject=${subject}&body=${body}`
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" />
+
+      {hasPrev && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onPrev() }}
+          className="absolute left-2 sm:left-6 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/20 text-white hover:bg-white/40 transition-colors"
+        >
+          <svg className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7" /></svg>
+        </button>
+      )}
+      {hasNext && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onNext() }}
+          className="absolute right-2 sm:right-6 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/20 text-white hover:bg-white/40 transition-colors"
+        >
+          <svg className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" /></svg>
+        </button>
+      )}
+
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="relative z-10 w-[90vw] max-w-md max-h-[85vh] overflow-y-auto rounded-2xl shadow-2xl"
+      >
+        <div className={`bg-gradient-to-br ${bgGradient} p-6 rounded-t-2xl`}>
+          <div className="flex items-center justify-between mb-4">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1 text-xs font-medium text-white">
+              {isCampaign ? "📧 Email Campaign" : "✍️ Petition"}
+              {item.source === "javid" && <span className="ml-1 opacity-75">• Javid Fighter</span>}
+            </span>
+            <button onClick={onClose} className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-white hover:bg-white/40 transition-colors">
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+          </div>
+
+          {/* Sharing ribbon at bottom - INSIDE modal */}
+          <div className="sticky bottom-0 border-t border-neutral-200 bg-gradient-to-r from-neutral-50 to-neutral-100 px-5 py-4">
+            <p className="text-xs font-semibold text-neutral-700 mb-3">{t.shareThisCampaign}</p>
+            <div className="flex items-center gap-2 flex-wrap">
+              {/* Copy link button */}
+              <button
+                onClick={handleCopy}
+                className="flex items-center gap-1.5 rounded-lg bg-white border border-neutral-200 px-3 py-2 text-xs font-medium text-neutral-700 hover:bg-neutral-50 transition-all"
+              >
+                <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
+                  <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
+                </svg>
+                {copied ? t.copied : t.copyLink}
+              </button>
+
+              {/* Social share buttons */}
+              {socialShares.map((social) => (
+                <a
+                  key={social.name}
+                  href={social.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => onUpvote()}
+                  className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium text-white transition-all hover:brightness-110"
+                  style={{ backgroundColor: social.color }}
+                >
+                  <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor">
+                    <path d={social.icon} />
+                  </svg>
+                  {social.name}
+                </a>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
+  )
+}
+
+// ------------------------------------------------------------------
+// Campaign Treemap
+// ------------------------------------------------------------------
 function CampaignTreemap({
   campaigns,
   onSelect,
@@ -1058,94 +1219,18 @@ function CampaignTreemap({
   onQuickAction: (campaign: TreemapCampaign, action: "share" | "promote" | "feedback") => void
   lang: "fa" | "en"
 }) {
-  const t = translations[lang]
-  const containerRef = useRef<HTMLDivElement>(null)
-  const [layout, setLayout] = useState<LayoutRect[]>([])
-  const [hoveredId, setHoveredId] = useState<string | null>(null)
+  const [open, setOpen] = useState(defaultOpen)
+  const [selectedPerson, setSelectedPerson] = useState<Person | null>(null)
 
-  const recalculate = useCallback(() => {
-    if (!containerRef.current) return
-    const { width, height } = containerRef.current.getBoundingClientRect()
-    if (width > 0 && height > 0) {
-      setLayout(computeTreemap(campaigns, width, height))
-    }
-  }, [campaigns])
-
-  useEffect(() => {
-    recalculate()
-    const el = containerRef.current
-    if (!el) return
-
-    const observer = new ResizeObserver(() => recalculate())
-    observer.observe(el)
-    return () => observer.disconnect()
-  }, [recalculate])
-
-  return (
-    <div
-      ref={containerRef}
-      className="relative w-full rounded-xl overflow-hidden"
-      style={{
-        height: "100%",
-        backgroundColor: "#e5e5e5",
-      }}
-    >
-      {layout.map((item) => {
-        const textColor = getTextColor(item.color)
-        const isSmall = item.w < 120 || item.h < 70
-        const isTiny = item.w < 90 || item.h < 55
-        const isHovered = hoveredId === item.id
-        const showActions = !isTiny && item.w >= 140 && item.h >= 80
-
-        return (
-          <div
-            key={item.id}
-            className="absolute transition-all duration-200 hover:z-10"
-            style={{
-              left: item.x,
-              top: item.y,
-              width: item.w,
-              height: item.h,
-            }}
-            onMouseEnter={() => setHoveredId(item.id)}
-            onMouseLeave={() => setHoveredId(null)}
-          >
-            <button
-              onClick={() => onSelect(item)}
-              className="w-full h-full flex flex-col justify-between overflow-hidden transition-all duration-200 hover:brightness-110 hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
-              style={{
-                backgroundColor: item.color,
-                borderRadius: 4,
-              }}
-            >
-              <div className="flex-1 flex flex-col justify-between p-2" style={{ minHeight: 0 }}>
-                <div className="flex items-start justify-between gap-1">
-                  <h3
-                    className={`font-semibold leading-tight line-clamp-2 text-left ${
-                      isTiny ? "text-[10px]" : isSmall ? "text-xs" : "text-sm"
-                    }`}
-                    style={{
-                      color: textColor,
-                      textShadow: getLuminance(item.color) <= 0.35 ? "0 1px 2px rgba(0,0,0,0.2)" : "none",
-                    }}
-                  >
-                    {item.title}
-                  </h3>
-                  {!isTiny && (
-                    <svg
-                      className="shrink-0 mt-0.5"
-                      style={{ color: textColor, opacity: 0.7, width: isSmall ? 12 : 14, height: isSmall ? 12 : 14 }}
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <path d={TYPE_ICONS[item.type]} />
-                    </svg>
-                  )}
-                </div>
+  const filtered = persons.filter((p) => {
+    if (!search) return true
+    const q = search.toLowerCase()
+    return (
+      p.name.toLowerCase().includes(q) ||
+      p.role.toLowerCase().includes(q) ||
+      p.x_handle.toLowerCase().includes(q)
+    )
+  })
 
                 <div className="flex items-center justify-between mt-auto">
                   <span
