@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react"
 import Link from "next/link"
 import { useAuth } from "@/lib/auth-context"
-import { getCampaigns, getPetitions, type EmailCampaign, type Petition } from "@/lib/api"
+import { getCampaigns, getPetitions, getJavidCampaigns, getJavidPetitions, type EmailCampaign, type Petition, type JavidCampaign, type JavidPetition } from "@/lib/api"
 import { IRAN_LIBERATION_CAMPAIGNS } from "./iran-liberation-campaigns"
 
 // ------------------------------------------------------------------
@@ -454,7 +454,6 @@ function useCampaignData() {
         )
 
         if (transformed.length === 0) {
-          // No campaigns in database, use mock data
           console.warn("No campaigns found in database, using mock data")
           setCampaigns(IRAN_LIBERATION_CAMPAIGNS)
           setUsingMockData(true)
@@ -464,7 +463,6 @@ function useCampaignData() {
         }
       } catch (error) {
         console.error("Failed to fetch campaigns from backend:", error)
-        // Fallback to mock data on API error
         setCampaigns(IRAN_LIBERATION_CAMPAIGNS)
         setUsingMockData(true)
       } finally {
@@ -1045,168 +1043,15 @@ function CampaignDetailModal({
 }
 
 // ------------------------------------------------------------------
-// Campaign Treemap
+// Engagement scoring
 // ------------------------------------------------------------------
-function AvatarCard({
-  person,
-  side,
-  onClick,
-  emailCount,
-}: {
-  person: Person
-  side: Side
-  onClick: () => void
-  emailCount: number
-}) {
-  const accentColor = side === "antiwar" ? "#e74c5e" : "#2dd4a8"
-  const isOverThreshold = emailCount >= EMAIL_THRESHOLD
-  const opacity = isOverThreshold ? "opacity-50" : ""
-
-  return (
-    <button
-      onClick={onClick}
-      className={`group relative flex flex-col items-center focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 rounded-lg p-1 transition-transform hover:scale-105 ${opacity}`}
-      style={{ width: 100 }}
-    >
-      <span
-        className="absolute -top-1 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-full px-2 py-0.5 text-[9px] font-bold text-white"
-        style={{ backgroundColor: isOverThreshold ? "#22c55e" : accentColor }}
-      >
-        {isOverThreshold ? `✓ ${emailCount}` : `${emailCount} / ${EMAIL_THRESHOLD}`}
-      </span>
-      <Avatar person={person} side={side} size={68} />
-      <span className="mt-2 max-w-[90px] text-center text-[11px] font-medium leading-tight text-neutral-700 line-clamp-2">
-        {person.name}
-      </span>
-    </button>
-  )
+function getEngagement(c: TreemapCampaign): number {
+  const raw = c.upvotes + (c.participants * 0.1) + c.weight
+  return Math.pow(Math.max(raw, 1), 0.7)
 }
 
 // ------------------------------------------------------------------
-// Stories Bar (Instagram-style for Campaigns & Petitions)
-// ------------------------------------------------------------------
-type StoryItem = {
-  id: string
-  title: string
-  description: string
-  link: string
-  type: "campaign" | "petition"
-  source: "internal" | "javid"
-  participation_count?: number
-  images?: string[]
-  email_to?: string
-  subject_base?: string
-  body_base?: string
-}
-
-function StoryOverlay({
-  item,
-  onClose,
-  onPrev,
-  onNext,
-  hasPrev,
-  hasNext,
-}: {
-  item: StoryItem
-  onClose: () => void
-  onPrev: () => void
-  onNext: () => void
-  hasPrev: boolean
-  hasNext: boolean
-}) {
-  const isCampaign = item.type === "campaign"
-  const bgGradient = isCampaign
-    ? "from-amber-500/90 via-orange-500/90 to-red-500/90"
-    : "from-rose-500/90 via-pink-500/90 to-purple-500/90"
-
-  const actionLabel = isCampaign ? "📧 ارسال ایمیل" : "✍️ امضای کارزار"
-
-  let actionHref = item.link
-  if (isCampaign && item.email_to) {
-    const subject = encodeURIComponent(item.subject_base || item.title)
-    const body = encodeURIComponent(item.body_base || "")
-    actionHref = `mailto:${item.email_to}?subject=${subject}&body=${body}`
-  }
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={onClose}>
-      <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" />
-
-      {hasPrev && (
-        <button
-          onClick={(e) => { e.stopPropagation(); onPrev() }}
-          className="absolute left-2 sm:left-6 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/20 text-white hover:bg-white/40 transition-colors"
-        >
-          <svg className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7" /></svg>
-        </button>
-      )}
-      {hasNext && (
-        <button
-          onClick={(e) => { e.stopPropagation(); onNext() }}
-          className="absolute right-2 sm:right-6 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/20 text-white hover:bg-white/40 transition-colors"
-        >
-          <svg className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" /></svg>
-        </button>
-      )}
-
-      <div
-        onClick={(e) => e.stopPropagation()}
-        className="relative z-10 w-[90vw] max-w-md max-h-[85vh] overflow-y-auto rounded-2xl shadow-2xl"
-      >
-        <div className={`bg-gradient-to-br ${bgGradient} p-6 rounded-t-2xl`}>
-          <div className="flex items-center justify-between mb-4">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1 text-xs font-medium text-white">
-              {isCampaign ? "📧 Email Campaign" : "✍️ Petition"}
-              {item.source === "javid" && <span className="ml-1 opacity-75">• Javid Fighter</span>}
-            </span>
-            <button onClick={onClose} className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-white hover:bg-white/40 transition-colors">
-              <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" /></svg>
-            </button>
-          </div>
-
-          {/* Sharing ribbon at bottom - INSIDE modal */}
-          <div className="sticky bottom-0 border-t border-neutral-200 bg-gradient-to-r from-neutral-50 to-neutral-100 px-5 py-4">
-            <p className="text-xs font-semibold text-neutral-700 mb-3">{t.shareThisCampaign}</p>
-            <div className="flex items-center gap-2 flex-wrap">
-              {/* Copy link button */}
-              <button
-                onClick={handleCopy}
-                className="flex items-center gap-1.5 rounded-lg bg-white border border-neutral-200 px-3 py-2 text-xs font-medium text-neutral-700 hover:bg-neutral-50 transition-all"
-              >
-                <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
-                  <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
-                </svg>
-                {copied ? t.copied : t.copyLink}
-              </button>
-
-              {/* Social share buttons */}
-              {socialShares.map((social) => (
-                <a
-                  key={social.name}
-                  href={social.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={() => onUpvote()}
-                  className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium text-white transition-all hover:brightness-110"
-                  style={{ backgroundColor: social.color }}
-                >
-                  <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor">
-                    <path d={social.icon} />
-                  </svg>
-                  {social.name}
-                </a>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-    </>
-  )
-}
-
-// ------------------------------------------------------------------
-// Campaign Treemap
+// Campaign Treemap (Stock-Market Style)
 // ------------------------------------------------------------------
 function CampaignTreemap({
   campaigns,
@@ -1219,91 +1064,178 @@ function CampaignTreemap({
   onQuickAction: (campaign: TreemapCampaign, action: "share" | "promote" | "feedback") => void
   lang: "fa" | "en"
 }) {
-  const [open, setOpen] = useState(defaultOpen)
-  const [selectedPerson, setSelectedPerson] = useState<Person | null>(null)
+  const t = translations[lang]
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [containerW, setContainerW] = useState(800)
 
-  const filtered = persons.filter((p) => {
-    if (!search) return true
-    const q = search.toLowerCase()
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el) return
+    const ro = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        setContainerW(entry.contentRect.width)
+      }
+    })
+    ro.observe(el)
+    setContainerW(el.clientWidth)
+    return () => ro.disconnect()
+  }, [])
+
+  if (campaigns.length === 0) {
     return (
-      p.name.toLowerCase().includes(q) ||
-      p.role.toLowerCase().includes(q) ||
-      p.x_handle.toLowerCase().includes(q)
+      <div className="flex items-center justify-center h-full text-neutral-400 text-sm">
+        {lang === "fa" ? "کمپینی یافت نشد" : "No campaigns found"}
+      </div>
     )
-  })
+  }
 
-                <div className="flex items-center justify-between mt-auto">
-                  <span
-                    className={`font-bold ${isTiny ? "text-xs" : isSmall ? "text-sm" : "text-base"}`}
-                    style={{ color: textColor, opacity: 0.9 }}
-                  >
-                    {formatParticipants(item.participants)}
+  const isMobile = containerW < 640
+  const scored = campaigns.map((c) => ({ campaign: c, score: getEngagement(c) }))
+  scored.sort((a, b) => b.score - a.score)
+  const totalScore = scored.reduce((s, c) => s + c.score, 0) || 1
+
+  if (isMobile) {
+    const maxScore = scored[0]?.score || 1
+    return (
+      <div ref={containerRef} className="w-full h-full overflow-y-auto space-y-2 p-1">
+        {scored.map(({ campaign: item, score }) => {
+          const proportion = score / maxScore
+          const h = Math.max(80, Math.round(proportion * 200))
+          const iconPath = TYPE_ICONS[item.type]
+          return (
+            <div
+              key={item.id}
+              role="button"
+              tabIndex={0}
+              onClick={() => onSelect(item)}
+              onKeyDown={(e) => { if (e.key === "Enter") onSelect(item) }}
+              className="w-full rounded-xl text-left transition-all hover:brightness-110 hover:shadow-lg active:scale-[0.99] cursor-pointer"
+              style={{ backgroundColor: item.color, height: h }}
+            >
+              <div className="flex flex-col h-full p-3">
+                <div className="flex items-start justify-between gap-1">
+                  <h3 className={`font-bold text-white leading-tight ${h > 120 ? "text-sm line-clamp-2" : "text-xs line-clamp-1"}`}>
+                    {lang === "fa" ? item.title : (item.titleEn || item.title)}
+                  </h3>
+                  <span className="shrink-0 text-[9px] font-medium rounded px-1.5 py-0.5 bg-white/20 text-white">
+                    {TYPE_LABELS[lang][item.type]}
                   </span>
-                  {!isSmall && (
-                    <span
-                      className="text-[10px] font-medium rounded px-1 py-0.5"
-                      style={{
-                        backgroundColor: getLuminance(item.color) <= 0.35 ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.08)",
-                        color: textColor,
-                      }}
-                    >
-                      {item.type}
+                </div>
+                {h > 140 && (
+                  <p className="mt-1 text-[11px] text-white/70 line-clamp-2">{item.description}</p>
+                )}
+                <div className="mt-auto pt-1 flex items-end justify-between">
+                  <div className="flex items-center gap-2">
+                    <svg className="h-3.5 w-3.5 text-white/70" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d={iconPath} />
+                    </svg>
+                    <span className="font-bold text-white/90 text-sm">{formatParticipants(item.participants)}</span>
+                  </div>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onQuickAction(item, "share") }}
+                    className="flex items-center gap-1 rounded px-2 py-1 text-[10px] font-medium bg-white/20 text-white hover:bg-white/30 transition-all"
+                  >
+                    {t.share}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    )
+  }
+
+  const maxScore = scored[0]?.score || 1
+  const engagedCampaigns = scored.map((s) => ({
+    ...s.campaign,
+    weight: Math.max(1, Math.round((s.score / maxScore) * 1000)),
+  }))
+  const itemCount = engagedCampaigns.length
+  const rowEstimate = Math.ceil(itemCount / 3)
+  const targetH = Math.max(rowEstimate * 140, typeof window !== "undefined" ? window.innerHeight * 2 : 1600)
+  const layoutRects = computeTreemap(engagedCampaigns, containerW, targetH)
+
+  const totalH = layoutRects.reduce((max, r) => Math.max(max, r.y + r.h + GAP), 0)
+
+  return (
+    <div ref={containerRef} className="w-full h-full overflow-y-auto">
+      <div className="relative w-full" style={{ height: totalH }}>
+        {layoutRects.map((item) => {
+          const isLarge = item.h > 180 && item.w > 200
+          const isMedium = item.h > 100 && item.w > 140
+          const iconPath = TYPE_ICONS[item.type]
+
+          return (
+            <div
+              key={item.id}
+              role="button"
+              tabIndex={0}
+              onClick={() => onSelect(item)}
+              onKeyDown={(e) => { if (e.key === "Enter") onSelect(item) }}
+              className="absolute rounded-lg overflow-hidden text-left transition-all duration-200 hover:brightness-110 hover:z-10 hover:shadow-xl active:scale-[0.99] cursor-pointer"
+              style={{
+                left: item.x,
+                top: item.y,
+                width: item.w,
+                height: item.h,
+                backgroundColor: item.color,
+              }}
+            >
+              <div className="flex flex-col h-full p-3 relative">
+                <div className="flex items-start justify-between gap-1">
+                  <h3 className={`font-bold text-white leading-tight ${isLarge ? "text-base" : isMedium ? "text-sm" : "text-xs"} ${isLarge ? "line-clamp-3" : "line-clamp-2"}`}>
+                    {lang === "fa" ? item.title : (item.titleEn || item.title)}
+                  </h3>
+                  {isMedium && (
+                    <span className="shrink-0 text-[9px] font-medium rounded px-1.5 py-0.5 bg-white/20 text-white">
+                      {TYPE_LABELS[lang][item.type]}
                     </span>
                   )}
                 </div>
-              </div>
-            </button>
 
-            {/* Quick action buttons - appear on hover for larger rectangles */}
-            {showActions && isHovered && (
-              <div
-                className="absolute bottom-1 left-1 right-1 flex items-center gap-1 animate-in fade-in slide-in-from-bottom-1 duration-150"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    onQuickAction(item, "share")
-                  }}
-                  className="flex-1 flex items-center justify-center gap-1 rounded px-2 py-1 text-[10px] font-medium bg-white/95 text-neutral-700 hover:bg-white transition-all shadow-sm"
-                  title={t.share}
-                >
-                  <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8M16 6l-4-4-4 4M12 2v13" />
-                  </svg>
-                  {t.share}
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    onQuickAction(item, "promote")
-                  }}
-                  className="flex-1 flex items-center justify-center gap-1 rounded px-2 py-1 text-[10px] font-medium bg-white/95 text-neutral-700 hover:bg-white transition-all shadow-sm"
-                  title={t.promote}
-                >
-                  <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
-                  </svg>
-                  {t.promote}
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    onQuickAction(item, "feedback")
-                  }}
-                  className="flex-1 flex items-center justify-center gap-1 rounded px-2 py-1 text-[10px] font-medium bg-white/95 text-neutral-700 hover:bg-white transition-all shadow-sm"
-                  title={t.feedback}
-                >
-                  <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                  </svg>
-                  {t.feedback}
-                </button>
+                {isLarge && (
+                  <p className="mt-2 text-xs text-white/75 leading-relaxed line-clamp-3">
+                    {item.description}
+                  </p>
+                )}
+
+                <div className="mt-auto pt-2 flex items-end justify-between">
+                  <div className="flex items-center gap-2">
+                    <svg className="h-3.5 w-3.5 text-white/70" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d={iconPath} />
+                    </svg>
+                    <span className={`font-bold text-white/90 ${isLarge ? "text-lg" : isMedium ? "text-sm" : "text-xs"}`}>
+                      {formatParticipants(item.participants)}
+                    </span>
+                    {isMedium && (
+                      <span className="text-[10px] text-white/60">{t.participants}</span>
+                    )}
+                  </div>
+                  {isMedium && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onQuickAction(item, "share") }}
+                      className="flex items-center gap-1 rounded px-2 py-1 text-[10px] font-medium bg-white/20 text-white hover:bg-white/30 transition-all"
+                    >
+                      <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8M16 6l-4-4-4 4M12 2v13" />
+                      </svg>
+                      {t.share}
+                    </button>
+                  )}
+                </div>
+
+                {isLarge && (
+                  <div className="mt-2 flex items-center gap-3 text-[10px] text-white/60">
+                    <span>▲ {item.upvotes.toLocaleString()}</span>
+                    <span>▼ {item.downvotes.toLocaleString()}</span>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-        )
-      })}
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
 }
@@ -1317,8 +1249,21 @@ export default function SocialMediaRadar() {
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [showSuccessModal, setShowSuccessModal] = useState<string | null>(null)
   const { campaigns, setCampaigns, loading: campaignsLoading, usingMockData } = useCampaignData()
+  const [javidCampaigns, setJavidCampaigns] = useState<JavidCampaign[]>([])
+  const [javidPetitions, setJavidPetitions] = useState<JavidPetition[]>([])
   const [lang, setLang] = useState<"fa" | "en">("fa")
   const [categoryFilter, setCategoryFilter] = useState<TreemapCampaign["type"] | "all">("all")
+  const [javidStoryIndex, setJavidStoryIndex] = useState<number | null>(null)
+
+  useEffect(() => {
+    getJavidCampaigns().then(setJavidCampaigns).catch(() => {})
+    getJavidPetitions().then(setJavidPetitions).catch(() => {})
+  }, [])
+
+  const javidStories = [
+    ...javidCampaigns.map((c, i) => ({ id: `jc-${i}`, title: c.title, description: c.description, link: c.link, type: "campaign" as const, participation_count: c.participation_count, images: c.images })),
+    ...javidPetitions.map((p, i) => ({ id: `jp-${i}`, title: p.title, description: p.description, link: p.link, type: "petition" as const, participation_count: p.participation_count, images: p.images })),
+  ]
 
   const t = translations[lang]
 
@@ -1329,7 +1274,7 @@ export default function SocialMediaRadar() {
   const handleUpvote = (campaignId: string) => {
     setCampaigns((prev) =>
       prev.map((c) =>
-        c.id === campaignId ? { ...c, upvotes: c.upvotes + 1, weight: c.weight + 0.1 } : c
+        c.id === campaignId ? { ...c, upvotes: c.upvotes + 1, participants: c.participants + 1, weight: c.weight + 0.1 } : c
       )
     )
   }
@@ -1420,6 +1365,82 @@ export default function SocialMediaRadar() {
           </div>
         </div>
       </header>
+
+      {/* Javid Fighter Stories Bar */}
+      {javidStories.length > 0 && (
+        <div className="shrink-0 w-full overflow-x-auto px-4 py-3 border-b border-neutral-200/60 bg-white/50">
+          <div className="mx-auto max-w-7xl">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-[10px] font-bold text-amber-600 uppercase tracking-wider">🦁 Javid Fighter</span>
+            </div>
+            <div className="flex gap-4 pb-1" style={{ minWidth: "min-content" }}>
+              {javidStories.map((story, idx) => {
+                const [from, to] = story.type === "campaign" ? ["#f59e0b", "#ea580c"] : ["#e11d48", "#be123c"]
+                const emoji = story.type === "campaign" ? "📧" : "✍️"
+                const truncTitle = story.title.length > 12 ? story.title.slice(0, 11) + "…" : story.title
+                return (
+                  <button key={story.id} onClick={() => setJavidStoryIndex(idx)} className="flex flex-col items-center gap-1.5 group flex-shrink-0">
+                    <div className="flex h-[62px] w-[62px] items-center justify-center rounded-full p-[3px]" style={{ background: `linear-gradient(135deg, ${from}, ${to})` }}>
+                      <div className="flex h-full w-full items-center justify-center rounded-full bg-white group-hover:bg-neutral-50 transition-colors">
+                        <span className="text-lg">{emoji}</span>
+                      </div>
+                    </div>
+                    <span className="block w-[68px] text-center text-[10px] font-medium text-neutral-600 leading-tight truncate">{truncTitle}</span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Javid Story Overlay */}
+      {javidStoryIndex !== null && javidStories[javidStoryIndex] && (() => {
+        const item = javidStories[javidStoryIndex]
+        const isCampaign = item.type === "campaign"
+        const bgGradient = isCampaign ? "from-amber-500/90 via-orange-500/90 to-red-500/90" : "from-rose-500/90 via-pink-500/90 to-purple-500/90"
+        const actionLabel = isCampaign ? "📧 شرکت در کمپین" : "✍️ امضای کارزار"
+        return (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center" onClick={() => setJavidStoryIndex(null)}>
+            <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" />
+            {javidStoryIndex > 0 && (
+              <button onClick={(e) => { e.stopPropagation(); setJavidStoryIndex(javidStoryIndex - 1) }} className="absolute left-2 sm:left-6 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/20 text-white hover:bg-white/40 transition-colors">
+                <svg className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7" /></svg>
+              </button>
+            )}
+            {javidStoryIndex < javidStories.length - 1 && (
+              <button onClick={(e) => { e.stopPropagation(); setJavidStoryIndex(javidStoryIndex + 1) }} className="absolute right-2 sm:right-6 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/20 text-white hover:bg-white/40 transition-colors">
+                <svg className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" /></svg>
+              </button>
+            )}
+            <div onClick={(e) => e.stopPropagation()} className="relative z-10 w-[90vw] max-w-md max-h-[85vh] overflow-y-auto rounded-2xl shadow-2xl">
+              <div className={`bg-gradient-to-br ${bgGradient} p-6 rounded-t-2xl`}>
+                <div className="flex items-center justify-between mb-4">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1 text-xs font-medium text-white">
+                    {isCampaign ? "📧 Email Campaign" : "✍️ Petition"} • Javid Fighter
+                  </span>
+                  <button onClick={() => setJavidStoryIndex(null)} className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-white hover:bg-white/40 transition-colors">
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" /></svg>
+                  </button>
+                </div>
+                <h2 className="text-xl font-bold text-white leading-tight">{item.title}</h2>
+                {item.participation_count != null && item.participation_count > 0 && (
+                  <p className="mt-2 text-sm text-white/80">👥 {item.participation_count.toLocaleString()} participants</p>
+                )}
+              </div>
+              <div className="bg-white p-6 rounded-b-2xl">
+                {item.images && item.images.length > 0 && (
+                  <div className="mb-4">{item.images.map((img, i) => (<img key={i} src={img} alt="" className="w-full rounded-lg mb-2 last:mb-0" />))}</div>
+                )}
+                <p className="text-sm text-neutral-600 leading-relaxed whitespace-pre-line">{item.description || "No description available."}</p>
+                <a href={item.link} target="_blank" rel="noopener noreferrer"
+                  className={`mt-5 flex w-full items-center justify-center gap-2 rounded-xl px-5 py-3.5 text-sm font-bold text-white transition-transform hover:scale-[1.02] active:scale-[0.98] ${isCampaign ? "bg-gradient-to-r from-amber-500 to-orange-500" : "bg-gradient-to-r from-rose-500 to-pink-500"}`}
+                >{actionLabel}</a>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
 
       {/* Mock Data Warning Banner */}
       {usingMockData && (
